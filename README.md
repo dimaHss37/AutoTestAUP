@@ -1,15 +1,15 @@
-НАБОР СКРИПТОВ ДЛЯ ТЕСТИРОВАНИЯ СИСТЕМЫ AUP
+##НАБОР СКРИПТОВ ДЛЯ ТЕСТИРОВАНИЯ СИСТЕМЫ AUP
 
-* TestSystem
-
-
-* CopyRandomFile
+####TestSystem
 
 
-* TimeMetr
+####CopyRandomFile
 
 
-* ChecParamsRecord[AC]
+####TimeMetr
+
+
+####ChecParamsRecord[AC]
 Описание:
 Программа сравнивает значения [ACTUAL COUNTERS] в файле rdt и в базе данных Postgresql
 
