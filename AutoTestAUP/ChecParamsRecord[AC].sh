@@ -4,6 +4,7 @@
 FILE_SGS_JSON=$(find /opt -type f -name "sgs.json" 2>/dev/null)
 if [ -z "$FILE_SGS_JSON" ]; then
      echo "Файл sgs.json не найден!"
+     # Запускаем подменю программы
      exit 0
 fi
 
@@ -19,6 +20,7 @@ if [ "$DatabaseLocation" == "Local" ]; then
         Password=$(cat $FILE_SGS_JSON | jq -r '.DatabaseConnection.Local.PostgreSQL.SGS.Password')
     else
         echo "Firebird"
+        # Запускаем подменю программы
         exit 0
     fi
 else
@@ -32,6 +34,7 @@ else
             Password=$(cat $FILE_SGS_JSON | jq -r '.DatabaseConnection.Server.PostgreSQL.SGS.Password')
         else
             echo "Firebird"
+            # Запускаем подменю программы
             exit 0
         fi
     else
@@ -48,6 +51,7 @@ ls $ACTIVE_DIR/rdt | column -t > $ACTIVE_DIR/.list.tmp
 
 if [ -z "$LIST" ]; then
      echo "Нет файлов для тестов"
+     # Запускаем подменю программы
      exit 0
 else
     clear
@@ -72,7 +76,7 @@ Readout_TYPE=$(cat $TARGET | grep "Readout\|Application")
 if [ -n "$Readout_TYPE" ]; then
     echo -e "${RED}Файлы из readout не обрабатываются, нет реализации на текущий момент.${NC}"
     echo ""
-    echo "Завершение работы."
+    # Запускаем подменю программы
     exit 0
 fi
 
@@ -84,12 +88,25 @@ where devnum='$devnum';")
 if [ -z "$id" ]; then
     echo -e "${RED}Данного прибора ($devnum) нет в базе данных.${NC}"
     echo ""
-    echo "Завершение работы."
+    # Запускаем подменю программы
     exit 0
 fi
 SIM_ACTIV=$(psql -U $Login -d $Name -p $Port -tA -c "select value from info_params.device_info_params
 join dicts.attributes_dict on dicts.attributes_dict.id = info_params.device_info_params.attribute_id
 where device_id=$id and attribute_name='SIM_ACTIV';")
+
+mkdir $ACTIVE_DIR/Log 2>/dev/null
+# назватие модуля
+MODULE_NAME="ChecParamsRecordAC"
+# получаем текущую дату
+DATE_STR=$(date +"%d_%m_%Y")
+# формируем имя и путь лог файла
+F_LOG="/Log/$MODULE_NAME$_DATE_STR.log"
+LOG="$ACTIVE_DIR$F_LOG"
+
+
+
+
 
 #[DEVICE DATA]
 # TYPE
@@ -108,6 +125,8 @@ SMT_numbs="99 96 9 82 81 80 8 79 78 77 76 75 74 73 72 71 7 68 67 66 65 64 6 53 5
 #if echo "$SMT_numbs" | grep -wq "$TYPE"; then
 if ! grep -q "$TYPE" <<< "$SMT_numbs"; then
     echo -e "${RED}Данный тип прибора не поддерживается.${NC}"
+    echo ""
+    # Запускаем подменю программы
     exit 0
 fi
 
@@ -123,13 +142,22 @@ fi
 echo -e "Версия протокола: ${GREEN}$VER_PROTOCOL${NC}"
 
 echo ""
-sleep 0.4
+sleep 0.3
 echo -e "\e[1m[DEVICE DATA]\e[0m"
 echo "---------------------------"
-    # Получения значения из БД
+# запись в log
+DATE_STR=$(date +"%d.%m.%Y")
+TIME_STR=$(date +"%H:%M:%S")
+echo "[$DATE_STR][$TIME_STR][$MODULE_NAME][Обрабатываем файл: $NAME_FILE]" >> $LOG
+echo "[$DATE_STR][$TIME_STR][$MODULE_NAME][Тип прибора: SMT]" >> $LOG
+echo "[$DATE_STR][$TIME_STR][$MODULE_NAME][id прибора: $id]" >> $LOG
+echo "[$DATE_STR][$TIME_STR][$MODULE_NAME]Версия протокола: $VER_PROTOCOL]" >> $LOG
+echo "[DEVICE DATA]" >> $LOG
+
+# Получения значения из БД
 DB_TYPE=$(psql -U $Login -d $Name -tA -c "SELECT devcode FROM dicts.devtypedict
 where id=$devtype_id;")
-sleep 0.2
+sleep 0.1
 STR1="TYPE: $TYPE"
 STR2="TYPE: $DB_TYPE"
 
@@ -137,14 +165,22 @@ if [ "$STR1" != "$STR2" ]; then
     echo -e "${RED}FILE ==>    $STR1${NC}"
     echo -e "${RED}DB   ==>    $STR2${NC}"
     echo "---------------------------"
+    # запись в log
+    DATE_STR=$(date +"%d.%m.%Y")
+    TIME_STR=$(date +"%H:%M:%S")
+    echo "[$DATE_STR][$TIME_STR][$MODULE_NAME][ERR][TYPE: FILE-$TYPE DB-$DB_TYPE параметры не совпали]" >> $LOG
 else
     echo -e "${GREEN}FILE ==>    $STR1${NC}"
     echo -e "${GREEN}DB   ==>    $STR2${NC}"
     echo "---------------------------"
+    # запись в log
+    DATE_STR=$(date +"%d.%m.%Y")
+    TIME_STR=$(date +"%H:%M:%S")
+    echo "[$DATE_STR][$TIME_STR][$MODULE_NAME][OK][TYPE: FILE-$TYPE DB-$DB_TYPE параметры совпали]" >> $LOG
 fi
 # SN
 SN=$(cat $TARGET | grep sn -i | grep -o '[0-9]\+')
-    # Получения значения из БД
+# Получения значения из БД
 #export PGPASSWORD='masterGazSetLogin'
 DB_SN=$(psql -U $Login -d $Name -tA -c "select devnum from devices_custs.device
 where id=$id;")
@@ -152,15 +188,23 @@ where id=$id;")
 
 STR1="SN: $SN"
 STR2="SN: $DB_SN"
-sleep 0.2
+sleep 0.1
 if echo "$SN" | grep -wq "$DB_SN"; then
     echo -e "${GREEN}FILE ==>    $STR1${NC}"
     echo -e "${GREEN}DB   ==>    $STR2${NC}"
     echo "---------------------------"
+    # запись в log
+    DATE_STR=$(date +"%d.%m.%Y")
+    TIME_STR=$(date +"%H:%M:%S")
+    echo "[$DATE_STR][$TIME_STR][$MODULE_NAME][OK][SN: FILE-$SN DB-$DB_SN параметры совпали]" >> $LOG
 else
     echo -e "${RED}FILE ==>    $STR1${NC}"
     echo -e "${RED}DB   ==>    $STR2${NC}"
     echo "---------------------------"
+    # запись в log
+    DATE_STR=$(date +"%d.%m.%Y")
+    TIME_STR=$(date +"%H:%M:%S")
+    echo "[$DATE_STR][$TIME_STR][$MODULE_NAME][ERR][SN: FILE-$SN DB-$DB_SN параметры не совпали]" >> $LOG
 fi
 # VERS
 VERS=$(cat $TARGET | grep vers -i | grep -oE '[0-9]*\.?[0-9]+')
@@ -186,10 +230,18 @@ if echo "$VERS" | grep -wq "$DB_VERS"; then
     echo -e "${GREEN}FILE ==>    $STR1${NC}"
     echo -e "${GREEN}DB   ==>    $STR2${NC}"
     echo "---------------------------"
+    # запись в log
+    DATE_STR=$(date +"%d.%m.%Y")
+    TIME_STR=$(date +"%H:%M:%S")
+    echo "[$DATE_STR][$TIME_STR][$MODULE_NAME][OK][VERS: FILE-$VERS DB-$DB_VERS параметры совпали]" >> $LOG
 else
     echo -e "${RED}FILE ==>    $STR1${NC}"
     echo -e "${RED}DB   ==>    $STR2${NC}"
     echo "---------------------------"
+    # запись в log
+    DATE_STR=$(date +"%d.%m.%Y")
+    TIME_STR=$(date +"%H:%M:%S")
+    echo "[$DATE_STR][$TIME_STR][$MODULE_NAME][ERR][VERS: FILE-$VERS DB-$DB_VERS параметры не совпали]" >> $LOG
 fi
 #SIMIP
 SIMIP=$(cat $TARGET | grep simip -i | awk -F'=' '{print $2}')
@@ -200,20 +252,29 @@ where device_id=$id and attribute_id=48;")
 #unset PGPASSWORD
 STR1="SIMIP: $SIMIP"
 STR2="SIMIP: $DB_SIMIP"
-sleep 0.2
+#SIMIP_LOG=$(cat $TARGET | grep simip -i | awk -F'=' '{print $2}' | sed -i '$s/\n//')
+sleep 0.1
 if echo "$SIMIP" | grep -wq "$DB_SIMIP"; then
     echo -e "${GREEN}FILE ==>    $STR1${NC}"
     echo -e "${GREEN}DB   ==>    $STR2${NC}"
     echo "---------------------------"
+    # запись в log
+    DATE_STR=$(date +"%d.%m.%Y")
+    TIME_STR=$(date +"%H:%M:%S")
+    echo "[$DATE_STR][$TIME_STR][$MODULE_NAME][OK][SIMIP: FILE-$SIMIP_LOG DB-$DB_SIMIP параметры совпали]" >> $LOG
 else
     echo -e "${RED}FILE ==>    $STR1${NC}"
     echo -e "${RED}DB   ==>    $STR2${NC}"
     echo "---------------------------"
+    # запись в log
+    DATE_STR=$(date +"%d.%m.%Y")
+    TIME_STR=$(date +"%H:%M:%S")
+    echo "[$DATE_STR][$TIME_STR][$MODULE_NAME][ERR][SIMIP: FILE-$SIMIP_LOG DB-$DB_SIMIP параметры не совпали]" >> $LOG
 fi
 
 
-sleep 0.4
-#[ACTUAL COUNTERS]
+sleep 0.3
+# [ACTUAL COUNTERS]
 # подщёт количества параметров в файле
 COUNTERS=$(tac $TARGET | grep -m 1 "ACTUAL COUNTERS" -a1 | head -n 1 | grep -o ";" | wc -l)
 COUNTERS=$((COUNTERS + 1))
@@ -222,6 +283,11 @@ echo -e "\e[1m[ACTUAL COUNTERS]\e[0m"
 echo "---------------------------"
 echo -e "Количество параметров: ${GREEN}$COUNTERS${NC}"
 echo "---------------------------"
+# запись в log
+echo "[ACTUAL COUNTERS]" >> $LOG
+DATE_STR=$(date +"%d.%m.%Y")
+TIME_STR=$(date +"%H:%M:%S")
+echo "[$DATE_STR][$TIME_STR][$MODULE_NAME][Количество параметров: $COUNTERS]" >> $LOG
 
 ACTUAL_COUNTERS=$(tac $TARGET | grep -m 1 "ACTUAL COUNTERS" -a1 | head -n 1)
 
@@ -232,26 +298,37 @@ i=0
 DB_STATUS_SYSTEM=$(psql -U $Login -d $Name -p $Port -tA -c "select value from info_params.device_info_params
 where device_id=$id and attribute_id=71;")
 STR1=$((16#${arr[$i]}))
+STATUS_SYSTEM=$STR1
 STR1="STATUS_SYSTEM: $STR1"
 STR2="STATUS_SYSTEM: $DB_STATUS_SYSTEM"
-sleep 0.2
+sleep 0.1
 if echo "$STR1" | grep -wq "$STR2"; then
     echo "---------------------------"
     echo -e "${GREEN}FILE ==>    $STR1${NC}"
     echo -e "${GREEN}DB   ==>    $STR2${NC}"
     echo "---------------------------"
+    # запись в log
+    DATE_STR=$(date +"%d.%m.%Y")
+    TIME_STR=$(date +"%H:%M:%S")
+    echo "[$DATE_STR][$TIME_STR][$MODULE_NAME][OK][Параметр №1 STATUS_SYSTEM: FILE-$STATUS_SYSTEM DB-$DB_STATUS_SYSTEM параметры совпали]" >> $LOG
     ((i++))
     if [ "$i" -ge "$COUNTERS" ]; then
-    exit 0
+        # Запускаем подменю программы
+        exit 0
     fi
 else
     echo "---------------------------"
     echo -e "${RED}FILE ==>    $STR1${NC}"
     echo -e "${RED}DB   ==>    $STR2${NC}"
     echo "---------------------------"
+    # запись в log
+    DATE_STR=$(date +"%d.%m.%Y")
+    TIME_STR=$(date +"%H:%M:%S")
+    echo "[$DATE_STR][$TIME_STR][$MODULE_NAME][ERR][Параметр №1 STATUS_SYSTEM: FILE-$STATUS_SYSTEM DB-$DB_STATUS_SYSTEM параметры не совпали]" >> $LOG
     ((i++))
     if [ "$i" -ge "$COUNTERS" ]; then
-    exit 0
+        # Запускаем подменю программы
+        exit 0
     fi
 fi
 
@@ -266,22 +343,31 @@ if [ $(echo "$DB_VOLUME_PULSE == 0.001 && $VOLUME_PULSE == 0.0010" | bc) -eq 1 ]
 fi
 STR1="VOLUME_PULSE: $VOLUME_PULSE"
 STR2="VOLUME_PULSE: $DB_VOLUME_PULSE"
-sleep 0.2
+sleep 0.1
 if echo "$STR1" | grep -wq "$STR2"; then
     echo -e "${GREEN}FILE ==>    $STR1${NC}"
     echo -e "${GREEN}DB   ==>    $STR2${NC}"
     echo "---------------------------"
+    # запись в log
+    DATE_STR=$(date +"%d.%m.%Y")
+    TIME_STR=$(date +"%H:%M:%S")
+    echo "[$DATE_STR][$TIME_STR][$MODULE_NAME][OK][Параметр №2 VOLUME_PULSE: FILE-$VOLUME_PULSE DB-$DB_VOLUME_PULSE параметры совпали]" >> $LOG
     ((i++))
     if [ "$i" -ge "$COUNTERS" ]; then
-    exit 0
+        # Запускаем подменю программы
+        exit 0
     fi
 else
     echo -e "${RED}FILE ==>    $STR1${NC}"
     echo -e "${RED}DB   ==>    $STR2${NC}"
     echo "---------------------------"
+    DATE_STR=$(date +"%d.%m.%Y")
+    TIME_STR=$(date +"%H:%M:%S")
+    echo "[$DATE_STR][$TIME_STR][$MODULE_NAME][ERR][Параметр №2 VOLUME_PULSE: FILE-$VOLUME_PULSE DB-$DB_VOLUME_PULSE параметры не совпали]" >> $LOG
     ((i++))
     if [ "$i" -ge "$COUNTERS" ]; then
-    exit 0
+        # Запускаем подменю программы
+        exit 0
     fi
 fi
 
@@ -296,22 +382,32 @@ if [[ "$CURRENT_COUNTER" == .* ]]; then
 fi
 STR1="CURRENT_COUNTER: $CURRENT_COUNTER"
 STR2="CURRENT_COUNTER: $DB_CURRENT_COUNTER"
-sleep 0.2
+sleep 0.1
 if echo "$STR1" | grep -wq "$STR2"; then
     echo -e "${GREEN}FILE ==>    $STR1${NC}"
     echo -e "${GREEN}DB   ==>    $STR2${NC}"
     echo "---------------------------"
+    # запись в log
+    DATE_STR=$(date +"%d.%m.%Y")
+    TIME_STR=$(date +"%H:%M:%S")
+    echo "[$DATE_STR][$TIME_STR][$MODULE_NAME][OK][Параметр №3 CURRENT_COUNTER: FILE-$CURRENT_COUNTER DB-$DB_CURRENT_COUNTER параметры совпали]" >> $LOG
     ((i++))
     if [ "$i" -ge "$COUNTERS" ]; then
-    exit 0
+        # Запускаем подменю программы
+        exit 0
     fi
 else
     echo -e "${RED}FILE ==>    $STR1${NC}"
     echo -e "${RED}DB   ==>    $STR2${NC}"
     echo "---------------------------"
+    # запись в log
+    DATE_STR=$(date +"%d.%m.%Y")
+    TIME_STR=$(date +"%H:%M:%S")
+    echo "[$DATE_STR][$TIME_STR][$MODULE_NAME][ERR][Параметр №3 CURRENT_COUNTER: FILE-$CURRENT_COUNTER DB-$DB_CURRENT_COUNTER параметры не совпали]" >> $LOG
     ((i++))
     if [ "$i" -ge "$COUNTERS" ]; then
-    exit 0
+        # Запускаем подменю программы
+        exit 0
     fi
 fi
 
@@ -319,25 +415,36 @@ fi
 # Получения значения из БД
 DB_DATETIME=$(psql -U $Login -d $Name -p $Port -tA -c "select value from info_params.device_info_params
 where device_id=$id and attribute_id=33;")
+DATETIME=${arr[$i]}
 STR1="DATETIME: ${arr[$i]}"
 STR1=$(echo "$STR1" | awk -F'.' '{print $1"."$2".20"$3""$4}' | sed 's/,/ /g')
 STR2="DATETIME: $DB_DATETIME"
-sleep 0.2
+sleep 0.1
 if echo "$STR1" | grep -wq "$STR2"; then
     echo -e "${GREEN}FILE ==>    $STR1${NC}"
     echo -e "${GREEN}DB   ==>    $STR2${NC}"
     echo "---------------------------"
+    # запись в log
+    DATE_STR=$(date +"%d.%m.%Y")
+    TIME_STR=$(date +"%H:%M:%S")
+    echo "[$DATE_STR][$TIME_STR][$MODULE_NAME][OK][Параметр №4 DATETIME: FILE-$DATETIME DB-$DB_DATETIME параметры совпали]" >> $LOG
     ((i++))
     if [ "$i" -ge "$COUNTERS" ]; then
-    exit 0
+        # Запускаем подменю программы
+        exit 0
     fi
 else
     echo -e "${RED}FILE ==>    $STR1${NC}"
     echo -e "${RED}DB   ==>    $STR2${NC}"
     echo "---------------------------"
+    # запись в log
+    DATE_STR=$(date +"%d.%m.%Y")
+    TIME_STR=$(date +"%H:%M:%S")
+    echo "[$DATE_STR][$TIME_STR][$MODULE_NAME][ERR][Параметр №4 DATETIME: FILE-$DATETIME DB-$DB_DATETIME параметры не совпали]" >> $LOG
     ((i++))
     if [ "$i" -ge "$COUNTERS" ]; then
-    exit 0
+        # Запускаем подменю программы
+        exit 0
     fi
 fi
 
@@ -356,23 +463,32 @@ fi
 APN_ADDRESS=${arr[$i]}
 STR1="APN_ADDRESS: ${arr[$i]}"
 STR2="APN_ADDRESS: $DB_APN_ADDRESS"
-sleep 0.2
+sleep 0.1
 if echo "$STR1" | grep -wq "$STR2"; then
     echo -e "${GREEN}FILE ==>    $STR1${NC}"
     echo -e "${GREEN}DB   ==>    $STR2${NC}"
-
     echo "---------------------------"
+    # запись в log
+    DATE_STR=$(date +"%d.%m.%Y")
+    TIME_STR=$(date +"%H:%M:%S")
+    echo "[$DATE_STR][$TIME_STR][$MODULE_NAME][OK][Параметр №5 APN_ADDRESS: FILE-$DATETIME DB-$DB_DATETIME параметры совпали]" >> $LOG
     ((i++))
     if [ "$i" -ge "$COUNTERS" ]; then
-    exit 0
+        # Запускаем подменю программы
+        exit 0
     fi
 else
     echo -e "${RED}FILE ==>    $STR1${NC}"
     echo -e "${RED}DB   ==>    $STR2${NC}"
     echo "---------------------------"
+    # запись в log
+    DATE_STR=$(date +"%d.%m.%Y")
+    TIME_STR=$(date +"%H:%M:%S")
+    echo "[$DATE_STR][$TIME_STR][$MODULE_NAME][ERR][Параметр №5 APN_ADDRESS: FILE-$DATETIME DB-$DB_DATETIME параметры не совпали]" >> $LOG
     ((i++))
     if [ "$i" -ge "$COUNTERS" ]; then
-    exit 0
+        # Запускаем подменю программы
+        exit 0
     fi
 fi
 
@@ -395,17 +511,27 @@ if echo "$STR1" | grep -wq "$STR2"; then
     echo -e "${GREEN}FILE ==>    $STR1${NC}"
     echo -e "${GREEN}DB   ==>    $STR2${NC}"
     echo "---------------------------"
+    # запись в log
+    DATE_STR=$(date +"%d.%m.%Y")
+    TIME_STR=$(date +"%H:%M:%S")
+    echo "[$DATE_STR][$TIME_STR][$MODULE_NAME][OK][Параметр №6 APN_LOGIN: FILE-$APN_LOGIN DB-$DB_APN_LOGIN параметры совпали]" >> $LOG
     ((i++))
     if [ "$i" -ge "$COUNTERS" ]; then
-    exit 0
+        # Запускаем подменю программы
+        exit 0
     fi
 else
     echo -e "${RED}FILE ==>    $STR1${NC}"
     echo -e "${RED}DB   ==>    $STR2${NC}"
     echo "---------------------------"
+    # запись в log
+    DATE_STR=$(date +"%d.%m.%Y")
+    TIME_STR=$(date +"%H:%M:%S")
+    echo "[$DATE_STR][$TIME_STR][$MODULE_NAME][ERR][Параметр №6 APN_LOGIN: FILE-$APN_LOGIN DB-$DB_APN_LOGIN параметры не совпали]" >> $LOG
     ((i++))
     if [ "$i" -ge "$COUNTERS" ]; then
-    exit 0
+        # Запускаем подменю программы
+        exit 0
     fi
 fi
 
@@ -430,7 +556,8 @@ if echo "$STR1" | grep -wq "$STR2"; then
     echo "---------------------------"
     ((i++))
     if [ "$i" -ge "$COUNTERS" ]; then
-    exit 0
+        # Запускаем подменю программы
+        exit 0
     fi
 else
     echo -e "${RED}FILE ==>    $STR1${NC}"
@@ -438,7 +565,8 @@ else
     echo "---------------------------"
     ((i++))
     if [ "$i" -ge "$COUNTERS" ]; then
-    exit 0
+        # Запускаем подменю программы
+        exit 0
     fi
 fi
 
@@ -463,7 +591,8 @@ if echo "$STR1" | grep -wq "$STR2"; then
     echo "---------------------------"
     ((i++))
     if [ "$i" -ge "$COUNTERS" ]; then
-    exit 0
+        # Запускаем подменю программы
+        exit 0
     fi
 else
     echo -e "${RED}FILE ==>    $STR1${NC}"
@@ -471,7 +600,8 @@ else
     echo "---------------------------"
     ((i++))
     if [ "$i" -ge "$COUNTERS" ]; then
-    exit 0
+        # Запускаем подменю программы
+        exit 0
     fi
 fi
 
@@ -491,7 +621,8 @@ if echo "$STR1" | grep -wq "$STR2"; then
     echo "---------------------------"
     ((i++))
     if [ "$i" -ge "$COUNTERS" ]; then
-    exit 0
+        # Запускаем подменю программы
+        exit 0
     fi
 else
     echo -e "${RED}FILE ==>    $STR1${NC}"
@@ -499,7 +630,8 @@ else
     echo "---------------------------"
     ((i++))
     if [ "$i" -ge "$COUNTERS" ]; then
-    exit 0
+        # Запускаем подменю программы
+        exit 0
     fi
 fi
 
@@ -525,7 +657,8 @@ if [ -n "$select" ]; then
     echo "---------------------------"
     ((i++))
     if [ "$i" -ge "$COUNTERS" ]; then
-    exit 0
+        # Запускаем подменю программы
+        exit 0
     fi
 else
     echo -e "${RED}FILE ==>    $STR1${NC}"
@@ -533,7 +666,8 @@ else
     echo "---------------------------"
     ((i++))
     if [ "$i" -ge "$COUNTERS" ]; then
-    exit 0
+        # Запускаем подменю программы
+        exit 0
     fi
 fi
 
@@ -558,7 +692,8 @@ if echo "$STR1" | grep -wq "$STR2"; then
     echo "---------------------------"
     ((i++))
     if [ "$i" -ge "$COUNTERS" ]; then
-    exit 0
+        # Запускаем подменю программы
+        exit 0
     fi
 else
     echo -e "${RED}FILE ==>    $STR1${NC}"
@@ -566,7 +701,8 @@ else
     echo "---------------------------"
     ((i++))
     if [ "$i" -ge "$COUNTERS" ]; then
-    exit 0
+        # Запускаем подменю программы
+        exit 0
     fi
 fi
 
@@ -589,7 +725,8 @@ if echo "$STR1" | grep -wq "$STR2"; then
     echo "---------------------------"
     ((i++))
     if [ "$i" -ge "$COUNTERS" ]; then
-    exit 0
+        # Запускаем подменю программы
+        exit 0
     fi
 else
     echo -e "${RED}FILE ==>    $STR1${NC}"
@@ -597,7 +734,8 @@ else
     echo "---------------------------"
     ((i++))
     if [ "$i" -ge "$COUNTERS" ]; then
-    exit 0
+        # Запускаем подменю программы
+        exit 0
     fi
 fi
 
@@ -616,7 +754,8 @@ if echo "$STR1" | grep -wq "$STR2"; then
     echo "---------------------------"
     ((i++))
     if [ "$i" -ge "$COUNTERS" ]; then
-    exit 0
+        # Запускаем подменю программы
+        exit 0
     fi
 else
     echo -e "${RED}FILE ==>    $STR1${NC}"
@@ -624,7 +763,8 @@ else
     echo "---------------------------"
     ((i++))
     if [ "$i" -ge "$COUNTERS" ]; then
-    exit 0
+        # Запускаем подменю программы
+        exit 0
     fi
 fi
 
@@ -649,7 +789,8 @@ if echo "$STR1" | grep -wq "$STR2"; then
     echo "---------------------------"
     ((i++))
     if [ "$i" -ge "$COUNTERS" ]; then
-    exit 0
+        # Запускаем подменю программы
+        exit 0
     fi
 else
     echo -e "${RED}FILE ==>    $STR1${NC}"
@@ -657,7 +798,8 @@ else
     echo "---------------------------"
     ((i++))
     if [ "$i" -ge "$COUNTERS" ]; then
-    exit 0
+        # Запускаем подменю программы
+        exit 0
     fi
 fi
 
@@ -675,7 +817,8 @@ if echo "$STR1" | grep -wq "$STR2"; then
     echo "---------------------------"
     ((i++))
     if [ "$i" -ge "$COUNTERS" ]; then
-    exit 0
+        # Запускаем подменю программы
+        exit 0
     fi
 else
     echo -e "${RED}FILE ==>    $STR1${NC}"
@@ -683,7 +826,8 @@ else
     echo "---------------------------"
     ((i++))
     if [ "$i" -ge "$COUNTERS" ]; then
-    exit 0
+        # Запускаем подменю программы
+        exit 0
     fi
 fi
 
@@ -708,7 +852,8 @@ if echo "$STR1" | grep -wq "$STR2"; then
     echo "---------------------------"
     ((i++))
     if [ "$i" -ge "$COUNTERS" ]; then
-    exit 0
+        # Запускаем подменю программы
+        exit 0
     fi
 else
     echo -e "${RED}FILE ==>    $STR1${NC}"
@@ -716,7 +861,8 @@ else
     echo "---------------------------"
     ((i++))
     if [ "$i" -ge "$COUNTERS" ]; then
-    exit 0
+        # Запускаем подменю программы
+        exit 0
     fi
 fi
 
@@ -741,7 +887,8 @@ if echo "$STR1" | grep -wq "$STR2"; then
     echo "---------------------------"
     ((i++))
     if [ "$i" -ge "$COUNTERS" ]; then
-    exit 0
+        # Запускаем подменю программы
+        exit 0
     fi
 else
     echo -e "${RED}FILE ==>    $STR1${NC}"
@@ -749,7 +896,8 @@ else
     echo "---------------------------"
     ((i++))
     if [ "$i" -ge "$COUNTERS" ]; then
-    exit 0
+        # Запускаем подменю программы
+        exit 0
     fi
 fi
 
@@ -767,7 +915,8 @@ if echo "$STR1" | grep -wq "$STR2"; then
     echo "---------------------------"
     ((i++))
     if [ "$i" -ge "$COUNTERS" ]; then
-    exit 0
+        # Запускаем подменю программы
+        exit 0
     fi
 else
     echo -e "${RED}FILE ==>    $STR1${NC}"
@@ -775,7 +924,8 @@ else
     echo "---------------------------"
     ((i++))
     if [ "$i" -ge "$COUNTERS" ]; then
-    exit 0
+        # Запускаем подменю программы
+        exit 0
     fi
 fi
 
@@ -793,7 +943,8 @@ if echo "$STR1" | grep -wq "$STR2"; then
     echo "---------------------------"
     ((i++))
     if [ "$i" -ge "$COUNTERS" ]; then
-    exit 0
+        # Запускаем подменю программы
+        exit 0
     fi
 else
     echo -e "${RED}FILE ==>    $STR1${NC}"
@@ -801,7 +952,8 @@ else
     echo "---------------------------"
     ((i++))
     if [ "$i" -ge "$COUNTERS" ]; then
-    exit 0
+        # Запускаем подменю программы
+        exit 0
     fi
 fi
 
@@ -826,7 +978,8 @@ if echo "$STR1" | grep -wq "$STR2"; then
     echo "---------------------------"
     ((i++))
     if [ "$i" -ge "$COUNTERS" ]; then
-    exit 0
+        # Запускаем подменю программы
+        exit 0
     fi
 else
     echo -e "${RED}FILE ==>    $STR1${NC}"
@@ -834,7 +987,8 @@ else
     echo "---------------------------"
     ((i++))
     if [ "$i" -ge "$COUNTERS" ]; then
-    exit 0
+        # Запускаем подменю программы
+        exit 0
     fi
 fi
 
@@ -852,7 +1006,8 @@ if echo "$STR1" | grep -wq "$STR2"; then
     echo "---------------------------"
     ((i++))
     if [ "$i" -ge "$COUNTERS" ]; then
-    exit 0
+        # Запускаем подменю программы
+        exit 0
     fi
 else
     echo -e "${RED}FILE ==>    $STR1${NC}"
@@ -860,7 +1015,8 @@ else
     echo "---------------------------"
     ((i++))
     if [ "$i" -ge "$COUNTERS" ]; then
-    exit 0
+        # Запускаем подменю программы
+        exit 0
     fi
 fi
 
@@ -880,7 +1036,8 @@ if (( $(echo "$VERS_S < 1.273700" | bc -l) )); then
             echo "---------------------------"
             ((i++))
             if [ "$i" -ge "$COUNTERS" ]; then
-            exit 0
+                # Запускаем подменю программы
+                exit 0
             fi
         else
             echo -e "${RED}FILE ==>    $STR1${NC}"
@@ -888,7 +1045,8 @@ if (( $(echo "$VERS_S < 1.273700" | bc -l) )); then
             echo "---------------------------"
             ((i++))
             if [ "$i" -ge "$COUNTERS" ]; then
-            exit 0
+                # Запускаем подменю программы
+                exit 0
             fi
         fi
 else
@@ -905,7 +1063,8 @@ else
             echo "---------------------------"
             ((i++))
             if [ "$i" -ge "$COUNTERS" ]; then
-            exit 0
+                # Запускаем подменю программы
+                exit 0
             fi
         else
             echo -e "${RED}FILE ==>    $STR1${NC}"
@@ -913,7 +1072,8 @@ else
             echo "---------------------------"
             ((i++))
             if [ "$i" -ge "$COUNTERS" ]; then
-            exit 0
+                # Запускаем подменю программы
+                exit 0
             fi
         fi
 fi
@@ -931,7 +1091,8 @@ else
             echo "---------------------------"
             ((i++))
             if [ "$i" -ge "$COUNTERS" ]; then
-            exit 0
+                # Запускаем подменю программы
+                exit 0
             fi
         else
             echo -e "${RED}FILE ==>    $STR1${NC}"
@@ -939,7 +1100,8 @@ else
             echo "---------------------------"
             ((i++))
             if [ "$i" -ge "$COUNTERS" ]; then
-            exit 0
+                # Запускаем подменю программы
+                exit 0
             fi
         fi
 fi
@@ -957,7 +1119,8 @@ if echo "$STR1" | grep -wq "$STR2"; then
     echo "---------------------------"
     ((i++))
     if [ "$i" -ge "$COUNTERS" ]; then
-    exit 0
+        # Запускаем подменю программы
+        exit 0
     fi
 else
     echo -e "${RED}FILE ==>    $STR1${NC}"
@@ -965,7 +1128,8 @@ else
     echo "---------------------------"
     ((i++))
     if [ "$i" -ge "$COUNTERS" ]; then
-    exit 0
+        # Запускаем подменю программы
+        exit 0
     fi
 fi
 
@@ -983,7 +1147,8 @@ if echo "$STR1" | grep -wq "$STR2"; then
     echo "---------------------------"
     ((i++))
     if [ "$i" -ge "$COUNTERS" ]; then
-    exit 0
+        # Запускаем подменю программы
+        exit 0
     fi
 else
     echo -e "${RED}FILE ==>    $STR1${NC}"
@@ -991,7 +1156,8 @@ else
     echo "---------------------------"
     ((i++))
     if [ "$i" -ge "$COUNTERS" ]; then
-    exit 0
+        # Запускаем подменю программы
+        exit 0
     fi
 fi
 
@@ -1009,7 +1175,8 @@ if echo "$STR1" | grep -wq "$STR2"; then
     echo "---------------------------"
     ((i++))
     if [ "$i" -ge "$COUNTERS" ]; then
-    exit 0
+        # Запускаем подменю программы
+        exit 0
     fi
 else
     echo -e "${RED}FILE ==>    $STR1${NC}"
@@ -1017,7 +1184,8 @@ else
     echo "---------------------------"
     ((i++))
     if [ "$i" -ge "$COUNTERS" ]; then
-    exit 0
+        # Запускаем подменю программы
+        exit 0
     fi
 fi
 
@@ -1035,7 +1203,8 @@ if echo "$STR1" | grep -wq "$STR2"; then
     echo "---------------------------"
     ((i++))
     if [ "$i" -ge "$COUNTERS" ]; then
-    exit 0
+        # Запускаем подменю программы
+        exit 0
     fi
 else
     echo -e "${RED}FILE ==>    $STR1${NC}"
@@ -1043,7 +1212,8 @@ else
     echo "---------------------------"
     ((i++))
     if [ "$i" -ge "$COUNTERS" ]; then
-    exit 0
+        # Запускаем подменю программы
+        exit 0
     fi
 fi
 
@@ -1061,7 +1231,8 @@ if echo "$STR1" | grep -wq "$STR2"; then
     echo "---------------------------"
     ((i++))
     if [ "$i" -ge "$COUNTERS" ]; then
-    exit 0
+        # Запускаем подменю программы
+        exit 0
     fi
 else
     echo -e "${RED}FILE ==>    $STR1${NC}"
@@ -1069,7 +1240,8 @@ else
     echo "---------------------------"
     ((i++))
     if [ "$i" -ge "$COUNTERS" ]; then
-    exit 0
+        # Запускаем подменю программы
+        exit 0
     fi
 fi
 
@@ -1094,7 +1266,8 @@ if echo "$STR1" | grep -wq "$STR2"; then
     echo "---------------------------"
     ((i++))
     if [ "$i" -ge "$COUNTERS" ]; then
-    exit 0
+        # Запускаем подменю программы
+        exit 0
     fi
 else
     echo -e "${RED}FILE ==>    $STR1${NC}"
@@ -1102,7 +1275,8 @@ else
     echo "---------------------------"
     ((i++))
     if [ "$i" -ge "$COUNTERS" ]; then
-    exit 0
+        # Запускаем подменю программы
+        exit 0
     fi
 fi
 
@@ -1120,7 +1294,8 @@ if echo "$STR1" | grep -wq "$STR2"; then
     echo "---------------------------"
     ((i++))
     if [ "$i" -ge "$COUNTERS" ]; then
-    exit 0
+        # Запускаем подменю программы
+        exit 0
     fi
 else
     echo -e "${RED}FILE ==>    $STR1${NC}"
@@ -1128,7 +1303,8 @@ else
     echo "---------------------------"
     ((i++))
     if [ "$i" -ge "$COUNTERS" ]; then
-    exit 0
+        # Запускаем подменю программы
+        exit 0
     fi
 fi
 
@@ -1146,7 +1322,8 @@ if echo "$STR1" | grep -wq "$STR2"; then
     echo "---------------------------"
     ((i++))
     if [ "$i" -ge "$COUNTERS" ]; then
-    exit 0
+        # Запускаем подменю программы
+        exit 0
     fi
 else
     echo -e "${RED}FILE ==>    $STR1${NC}"
@@ -1154,7 +1331,8 @@ else
     echo "---------------------------"
     ((i++))
     if [ "$i" -ge "$COUNTERS" ]; then
-    exit 0
+        # Запускаем подменю программы
+        exit 0
     fi
 fi
 
@@ -1172,7 +1350,8 @@ if echo "$STR1" | grep -wq "$STR2"; then
     echo "---------------------------"
     ((i++))
     if [ "$i" -ge "$COUNTERS" ]; then
-    exit 0
+        # Запускаем подменю программы
+        exit 0
     fi
 else
     echo -e "${RED}FILE ==>    $STR1${NC}"
@@ -1180,7 +1359,8 @@ else
     echo "---------------------------"
     ((i++))
     if [ "$i" -ge "$COUNTERS" ]; then
-    exit 0
+        # Запускаем подменю программы
+        exit 0
     fi
 fi
 
@@ -1198,7 +1378,8 @@ if echo "$STR1" | grep -wq "$STR2"; then
     echo "---------------------------"
     ((i++))
     if [ "$i" -ge "$COUNTERS" ]; then
-    exit 0
+        # Запускаем подменю программы
+        exit 0
     fi
 else
     echo -e "${RED}FILE ==>    $STR1${NC}"
@@ -1206,7 +1387,8 @@ else
     echo "---------------------------"
     ((i++))
     if [ "$i" -ge "$COUNTERS" ]; then
-    exit 0
+        # Запускаем подменю программы
+        exit 0
     fi
 fi
 
@@ -1224,7 +1406,8 @@ if echo "$STR1" | grep -wq "$STR2"; then
     echo "---------------------------"
     ((i++))
     if [ "$i" -ge "$COUNTERS" ]; then
-    exit 0
+        # Запускаем подменю программы
+        exit 0
     fi
 else
     echo -e "${RED}FILE ==>    $STR1${NC}"
@@ -1232,7 +1415,8 @@ else
     echo "---------------------------"
     ((i++))
     if [ "$i" -ge "$COUNTERS" ]; then
-    exit 0
+        # Запускаем подменю программы
+        exit 0
     fi
 fi
 
@@ -1256,7 +1440,8 @@ if echo "$STR1" | grep -wq "$STR2"; then
     echo "---------------------------"
     ((i++))
     if [ "$i" -ge "$COUNTERS" ]; then
-    exit 0
+        # Запускаем подменю программы
+        exit 0
     fi
 else
     echo -e "${RED}FILE ==>    $STR1${NC}"
@@ -1264,7 +1449,8 @@ else
     echo "---------------------------"
     ((i++))
     if [ "$i" -ge "$COUNTERS" ]; then
-    exit 0
+        # Запускаем подменю программы
+        exit 0
     fi
 fi
 
@@ -1285,7 +1471,8 @@ if [ -n "$VERS_K" ]; then
             echo "---------------------------"
             ((i++))
             if [ "$i" -ge "$COUNTERS" ]; then
-            exit 0
+                # Запускаем подменю программы
+                exit 0
             fi
         else
             echo -e "${RED}FILE ==>    $STR1${NC}"
@@ -1293,7 +1480,8 @@ if [ -n "$VERS_K" ]; then
             echo "---------------------------"
             ((i++))
             if [ "$i" -ge "$COUNTERS" ]; then
-            exit 0
+                # Запускаем подменю программы
+                exit 0
             fi
         fi
     else
@@ -1302,7 +1490,8 @@ if [ -n "$VERS_K" ]; then
         echo "---------------------------"
         ((i++))
         if [ "$i" -ge "$COUNTERS" ]; then
-        exit 0
+            # Запускаем подменю программы
+            exit 0
         fi
     fi
 else
@@ -1321,7 +1510,8 @@ else
             echo "---------------------------"
             ((i++))
             if [ "$i" -ge "$COUNTERS" ]; then
-            exit 0
+                # Запускаем подменю программы
+                exit 0
             fi
         else
             echo -e "${RED}FILE ==>    $STR1${NC}"
@@ -1329,7 +1519,8 @@ else
             echo "---------------------------"
             ((i++))
             if [ "$i" -ge "$COUNTERS" ]; then
-            exit 0
+                # Запускаем подменю программы
+                exit 0
             fi
         fi
     else
@@ -1338,7 +1529,8 @@ else
         echo "---------------------------"
         ((i++))
         if [ "$i" -ge "$COUNTERS" ]; then
-        exit 0
+            # Запускаем подменю программы
+            exit 0
         fi
     fi
 fi
@@ -1357,7 +1549,8 @@ if echo "$STR1" | grep -wq "$STR2"; then
     echo "---------------------------"
     ((i++))
     if [ "$i" -ge "$COUNTERS" ]; then
-    exit 0
+        # Запускаем подменю программы
+        exit 0
     fi
 else
     echo -e "${RED}FILE ==>    $STR1${NC}"
@@ -1365,7 +1558,8 @@ else
     echo "---------------------------"
     ((i++))
     if [ "$i" -ge "$COUNTERS" ]; then
-    exit 0
+        # Запускаем подменю программы
+        exit 0
     fi
 fi
 
@@ -1383,7 +1577,8 @@ if echo "$STR1" | grep -wq "$STR2"; then
     echo "---------------------------"
     ((i++))
     if [ "$i" -ge "$COUNTERS" ]; then
-    exit 0
+        # Запускаем подменю программы
+        exit 0
     fi
 else
     echo -e "${RED}FILE ==>    $STR1${NC}"
@@ -1391,7 +1586,8 @@ else
     echo "---------------------------"
     ((i++))
     if [ "$i" -ge "$COUNTERS" ]; then
-    exit 0
+        # Запускаем подменю программы
+        exit 0
     fi
 fi
 
@@ -1410,7 +1606,8 @@ if echo "$STR1" | grep -wq "$STR2"; then
     echo "---------------------------"
     ((i++))
     if [ "$i" -ge "$COUNTERS" ]; then
-    exit 0
+        # Запускаем подменю программы
+        exit 0
     fi
 else
     echo -e "${RED}FILE ==>    $STR1${NC}"
@@ -1418,7 +1615,8 @@ else
     echo "---------------------------"
     ((i++))
     if [ "$i" -ge "$COUNTERS" ]; then
-    exit 0
+        # Запускаем подменю программы
+        exit 0
     fi
 fi
 
@@ -1437,7 +1635,8 @@ if echo "$STR1" | grep -wq "$STR2"; then
     echo "---------------------------"
     ((i++))
     if [ "$i" -ge "$COUNTERS" ]; then
-    exit 0
+        # Запускаем подменю программы
+        exit 0
     fi
 else
     echo -e "${RED}FILE ==>    $STR1${NC}"
@@ -1445,7 +1644,8 @@ else
     echo "---------------------------"
     ((i++))
     if [ "$i" -ge "$COUNTERS" ]; then
-    exit 0
+        # Запускаем подменю программы
+        exit 0
     fi
 fi
 
@@ -1464,7 +1664,8 @@ if echo "$STR1" | grep -wq "$STR2"; then
     echo "---------------------------"
     ((i++))
     if [ "$i" -ge "$COUNTERS" ]; then
-    exit 0
+        # Запускаем подменю программы
+        exit 0
     fi
 else
     echo -e "${RED}FILE ==>    $STR1${NC}"
@@ -1472,7 +1673,8 @@ else
     echo "---------------------------"
     ((i++))
     if [ "$i" -ge "$COUNTERS" ]; then
-    exit 0
+        # Запускаем подменю программы
+        exit 0
     fi
 fi
 
@@ -1491,7 +1693,8 @@ if echo "$STR1" | grep -wq "$STR2"; then
     echo "---------------------------"
     ((i++))
     if [ "$i" -ge "$COUNTERS" ]; then
-    exit 0
+        # Запускаем подменю программы
+        exit 0
     fi
 else
     echo -e "${RED}FILE ==>    $STR1${NC}"
@@ -1499,7 +1702,8 @@ else
     echo "---------------------------"
     ((i++))
     if [ "$i" -ge "$COUNTERS" ]; then
-    exit 0
+        # Запускаем подменю программы
+        exit 0
     fi
 fi
 
@@ -1516,7 +1720,8 @@ if echo "$STR1" | grep -wq "$STR2"; then
     echo "---------------------------"
     ((i++))
     if [ "$i" -ge "$COUNTERS" ]; then
-    exit 0
+        # Запускаем подменю программы
+        exit 0
     fi
 else
     echo -e "${RED}FILE ==>    $STR1${NC}"
@@ -1524,7 +1729,8 @@ else
     echo "---------------------------"
     ((i++))
     if [ "$i" -ge "$COUNTERS" ]; then
-    exit 0
+        # Запускаем подменю программы
+        exit 0
     fi
 fi
 
@@ -1543,7 +1749,8 @@ if [ -n "$VERS_K" ]; then
             echo "---------------------------"
             ((i++))
             if [ "$i" -ge "$COUNTERS" ]; then
-            exit 0
+                # Запускаем подменю программы
+                exit 0
             fi
         else
             echo -e "${RED}FILE ==>    $STR1${NC}"
@@ -1551,7 +1758,8 @@ if [ -n "$VERS_K" ]; then
             echo "---------------------------"
             ((i++))
             if [ "$i" -ge "$COUNTERS" ]; then
-            exit 0
+                # Запускаем подменю программы
+                exit 0
             fi
         fi
     else
@@ -1560,7 +1768,8 @@ if [ -n "$VERS_K" ]; then
         echo "---------------------------"
         ((i++))
         if [ "$i" -ge "$COUNTERS" ]; then
-        exit 0
+            # Запускаем подменю программы
+            exit 0
         fi
     fi
 else
@@ -1577,7 +1786,8 @@ else
             echo "---------------------------"
             ((i++))
             if [ "$i" -ge "$COUNTERS" ]; then
-            exit 0
+                # Запускаем подменю программы
+                exit 0
             fi
         else
             echo -e "${RED}FILE ==>    $STR1${NC}"
@@ -1585,7 +1795,8 @@ else
             echo "---------------------------"
             ((i++))
             if [ "$i" -ge "$COUNTERS" ]; then
-            exit 0
+                # Запускаем подменю программы
+                exit 0
             fi
         fi
     else
@@ -1594,7 +1805,8 @@ else
         echo "---------------------------"
         ((i++))
         if [ "$i" -ge "$COUNTERS" ]; then
-        exit 0
+            # Запускаем подменю программы
+            exit 0
         fi
     fi
 fi
@@ -1612,7 +1824,8 @@ if echo "$STR1" | grep -wq "$STR2"; then
     echo "---------------------------"
     ((i++))
     if [ "$i" -ge "$COUNTERS" ]; then
-    exit 0
+        # Запускаем подменю программы
+        exit 0
     fi
 else
     echo -e "${RED}FILE ==>    $STR1${NC}"
@@ -1620,7 +1833,8 @@ else
     echo "---------------------------"
     ((i++))
     if [ "$i" -ge "$COUNTERS" ]; then
-    exit 0
+        # Запускаем подменю программы
+        exit 0
     fi
 fi
 
@@ -1637,7 +1851,8 @@ if echo "$STR1" | grep -wq "$STR2"; then
     echo "---------------------------"
     ((i++))
     if [ "$i" -ge "$COUNTERS" ]; then
-    exit 0
+        # Запускаем подменю программы
+        exit 0
     fi
 else
     echo -e "${RED}FILE ==>    $STR1${NC}"
@@ -1645,7 +1860,8 @@ else
     echo "---------------------------"
     ((i++))
     if [ "$i" -ge "$COUNTERS" ]; then
-    exit 0
+        # Запускаем подменю программы
+        exit 0
     fi
 fi
 
@@ -1662,7 +1878,8 @@ if echo "$STR1" | grep -wq "$STR2"; then
     echo "---------------------------"
     ((i++))
     if [ "$i" -ge "$COUNTERS" ]; then
-    exit 0
+        # Запускаем подменю программы
+        exit 0
     fi
 else
     echo -e "${RED}FILE ==>    $STR1${NC}"
@@ -1670,7 +1887,8 @@ else
     echo "---------------------------"
     ((i++))
     if [ "$i" -ge "$COUNTERS" ]; then
-    exit 0
+        # Запускаем подменю программы
+        exit 0
     fi
 fi
 
@@ -1687,7 +1905,8 @@ if echo "$STR1" | grep -wq "$STR2"; then
     echo "---------------------------"
     ((i++))
     if [ "$i" -ge "$COUNTERS" ]; then
-    exit 0
+        # Запускаем подменю программы
+        exit 0
     fi
 else
     echo -e "${RED}FILE ==>    $STR1${NC}"
@@ -1695,7 +1914,8 @@ else
     echo "---------------------------"
     ((i++))
     if [ "$i" -ge "$COUNTERS" ]; then
-    exit 0
+        # Запускаем подменю программы
+        exit 0
     fi
 fi
 
@@ -1717,7 +1937,8 @@ if echo "$STR1" | grep -wq "$STR2"; then
     echo "---------------------------"
     ((i++))
     if [ "$i" -ge "$COUNTERS" ]; then
-    exit 0
+        # Запускаем подменю программы
+        exit 0
     fi
 else
     echo -e "${RED}FILE ==>    $STR1${NC}"
@@ -1725,7 +1946,8 @@ else
     echo "---------------------------"
     ((i++))
     if [ "$i" -ge "$COUNTERS" ]; then
-    exit 0
+        # Запускаем подменю программы
+        exit 0
     fi
 fi
 
@@ -1742,7 +1964,8 @@ if echo "$STR1" | grep -wq "$STR2"; then
     echo "---------------------------"
     ((i++))
     if [ "$i" -ge "$COUNTERS" ]; then
-    exit 0
+        # Запускаем подменю программы
+        exit 0
     fi
 else
     echo -e "${RED}FILE ==>    $STR1${NC}"
@@ -1750,7 +1973,8 @@ else
     echo "---------------------------"
     ((i++))
     if [ "$i" -ge "$COUNTERS" ]; then
-    exit 0
+        # Запускаем подменю программы
+        exit 0
     fi
 fi
 
@@ -1767,7 +1991,8 @@ if echo "$STR1" | grep -wq "$STR2"; then
     echo "---------------------------"
     ((i++))
     if [ "$i" -ge "$COUNTERS" ]; then
-    exit 0
+        # Запускаем подменю программы
+        exit 0
     fi
 else
     echo -e "${RED}FILE ==>    $STR1${NC}"
@@ -1775,7 +2000,8 @@ else
     echo "---------------------------"
     ((i++))
     if [ "$i" -ge "$COUNTERS" ]; then
-    exit 0
+        # Запускаем подменю программы
+        exit 0
     fi
 fi
 
@@ -1792,7 +2018,8 @@ if echo "$STR1" | grep -wq "$STR2"; then
     echo "---------------------------"
     ((i++))
     if [ "$i" -ge "$COUNTERS" ]; then
-    exit 0
+        # Запускаем подменю программы
+        exit 0
     fi
 else
     echo -e "${RED}FILE ==>    $STR1${NC}"
@@ -1800,7 +2027,8 @@ else
     echo "---------------------------"
     ((i++))
     if [ "$i" -ge "$COUNTERS" ]; then
-    exit 0
+        # Запускаем подменю программы
+        exit 0
     fi
 fi
 
@@ -1817,7 +2045,8 @@ if echo "$STR1" | grep -wq "$STR2"; then
     echo "---------------------------"
     ((i++))
     if [ "$i" -ge "$COUNTERS" ]; then
-    exit 0
+        # Запускаем подменю программы
+        exit 0
     fi
 else
     echo -e "${RED}FILE ==>    $STR1${NC}"
@@ -1825,7 +2054,8 @@ else
     echo "---------------------------"
     ((i++))
     if [ "$i" -ge "$COUNTERS" ]; then
-    exit 0
+        # Запускаем подменю программы
+        exit 0
     fi
 fi
 
@@ -1842,7 +2072,8 @@ if echo "$STR1" | grep -wq "$STR2"; then
     echo "---------------------------"
     ((i++))
     if [ "$i" -ge "$COUNTERS" ]; then
-    exit 0
+        # Запускаем подменю программы
+        exit 0
     fi
 else
     echo -e "${RED}FILE ==>    $STR1${NC}"
@@ -1850,7 +2081,8 @@ else
     echo "---------------------------"
     ((i++))
     if [ "$i" -ge "$COUNTERS" ]; then
-    exit 0
+        # Запускаем подменю программы
+        exit 0
     fi
 fi
 
@@ -1867,7 +2099,8 @@ if echo "$STR1" | grep -wq "$STR2"; then
     echo "---------------------------"
     ((i++))
     if [ "$i" -ge "$COUNTERS" ]; then
-    exit 0
+        # Запускаем подменю программы
+        exit 0
     fi
 else
     echo -e "${RED}FILE ==>    $STR1${NC}"
@@ -1875,7 +2108,8 @@ else
     echo "---------------------------"
     ((i++))
     if [ "$i" -ge "$COUNTERS" ]; then
-    exit 0
+        # Запускаем подменю программы
+        exit 0
     fi
 fi
 
@@ -1892,7 +2126,8 @@ if echo "$STR1" | grep -wq "$STR2"; then
     echo "---------------------------"
     ((i++))
     if [ "$i" -ge "$COUNTERS" ]; then
-    exit 0
+        # Запускаем подменю программы
+        exit 0
     fi
 else
     echo -e "${RED}FILE ==>    $STR1${NC}"
@@ -1900,7 +2135,8 @@ else
     echo "---------------------------"
     ((i++))
     if [ "$i" -ge "$COUNTERS" ]; then
-    exit 0
+        # Запускаем подменю программы
+        exit 0
     fi
 fi
 
@@ -1917,7 +2153,8 @@ if echo "$STR1" | grep -wq "$STR2"; then
     echo "---------------------------"
     ((i++))
     if [ "$i" -ge "$COUNTERS" ]; then
-    exit 0
+        # Запускаем подменю программы
+        exit 0
     fi
 else
     echo -e "${RED}FILE ==>    $STR1${NC}"
@@ -1925,7 +2162,8 @@ else
     echo "---------------------------"
     ((i++))
     if [ "$i" -ge "$COUNTERS" ]; then
-    exit 0
+        # Запускаем подменю программы
+        exit 0
     fi
 fi
 
@@ -1942,7 +2180,8 @@ if echo "$STR1" | grep -wq "$STR2"; then
     echo "---------------------------"
     ((i++))
     if [ "$i" -ge "$COUNTERS" ]; then
-    exit 0
+        # Запускаем подменю программы
+        exit 0
     fi
 else
     echo -e "${RED}FILE ==>    $STR1${NC}"
@@ -1950,11 +2189,12 @@ else
     echo "---------------------------"
     ((i++))
     if [ "$i" -ge "$COUNTERS" ]; then
-    exit 0
+        # Запускаем подменю программы
+        exit 0
     fi
 fi
 
 
 
 # Запускаем подменю программы
-$ACTIVE_DIR/Menu[AC].sh
+#$ACTIVE_DIR/Menu[AC].sh
