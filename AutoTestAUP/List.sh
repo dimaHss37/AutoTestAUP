@@ -1,13 +1,8 @@
 #!/bin/bash
 
 ACTIVE_DIR=$(dirname "$0")
-#LIST=$(ls $ACTIVE_DIR/rdt | column -t)
-#ls $ACTIVE_DIR/rdt | column -t > $ACTIVE_DIR/.list.tmp
-
-
 
 files=$(find $ACTIVE_DIR/rdt -type f | wc -l )
-
 
 file=$(find $ACTIVE_DIR/rdt -type f)
 
@@ -20,12 +15,13 @@ for ((i=1; i<=$files; i++)); do
     if [ -z $prot ]; then
     prot="VER_PROTOCOL=0"
     fi
-    echo -e "$name\t$vers\t$prot" | nl -s ' ==> ' >> ./list.txt
+    echo -e "$name\t$vers\t$prot" >> ./.list.tmp
 done
+list=$(cat ./.list.tmp | nl -s ' ==> ')
 
 for ((i=1; i<=$files; i++)); do
     ind="NR==$i"
-    cat ./list.txt | awk $ind
+    echo "$list" | awk $ind
     sleep 0.02
 done
-rm ./list.txt
+rm ./.list.tmp
