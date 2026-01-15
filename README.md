@@ -10,7 +10,8 @@
 
 
 * ChecParamsRecord[AC]
-Описание: Программа сравнивает значения [ACTUAL COUNTERS] в файле rdt и в базе данных Postgresql
+Описание:
+Программа сравнивает значения [ACTUAL COUNTERS] в файле rdt и в базе данных Postgresql
 
 Инструкция
 - в системе должен быть установлен и запущен "postgresql.service"
