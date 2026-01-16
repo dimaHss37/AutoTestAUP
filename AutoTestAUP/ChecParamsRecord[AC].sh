@@ -1,9 +1,14 @@
 #!/bin/bash
 
+# Коды цветов
+RED="\033[31m" # Красный
+GREEN="\033[32m" # Зеленый
+NC="\033[0m" # Без цвета (сброс)
+
 # ищем "sgs.json"
 FILE_SGS_JSON=$(find /opt -type f -name "sgs.json" 2>/dev/null)
 if [ -z "$FILE_SGS_JSON" ]; then
-     echo "Файл sgs.json не найден!"
+     echo "${RED}Файл sgs.json не найден!${NC}"
      # Запускаем подменю программы
      exit 0
 fi
@@ -38,21 +43,33 @@ else
             exit 0
         fi
     else
-        echo "Некорректный sgs.json"
+        echo "${RED}Некорректный sgs.json${NC}"
     fi
 fi
-
+# проверка подключения к базе данных
+export PGPASSWORD=$Password
+Connection_DB=$(psql -U $Login -h $Host -p $Port -d $Name -tA -c "\l" | grep $Name)
+unset PGPASSWORD
+if [ -z "$Connection_DB" ]; then
+    echo ""
+    echo "${RED}Нет подключения к базе данных${NC}"
+    exit 0
+fi
 # Ищем папку "In", куда будем копировать файл
 IN_DIR=$(find /opt -type d -name "In" 2>/dev/null | grep Arc/In)
 
 ACTIVE_DIR=$(dirname "$0")
 
 # МЕНЮ ВЫБОРА ФАЙЛА
+# принудительное удаление временных файлов
+rm $ACTIVE_DIR/.files_list.tmp 2>/dev/null
+rm $ACTIVE_DIR/.list1.tmp 2>/dev/null
+rm $ACTIVE_DIR/.list2.tmp 2>/dev/null
 # принудительное создание папки rdt
 mkdir $ACTIVE_DIR/rdt 2>/dev/null
 # удаление файлов с расширениен не "rdt" в папке rdt
 find $ACTIVE_DIR/rdt -type f ! -iname "*.rdt" -delete
-
+# подщёт количества файлов в папке
 files=$(find $ACTIVE_DIR/rdt -type f | wc -l )
 if [[ $files == 0 ]]; then
     echo ""
@@ -98,10 +115,6 @@ done
 
 # Путь к обрабатываемому файлу
 TARGET="$ACTIVE_DIR/rdt/$NAME_FILE"
-# Коды цветов
-RED="\033[31m" # Красный
-GREEN="\033[32m" # Зеленый
-NC="\033[0m" # Без цвета (сброс)
 
 Readout_TYPE=$(cat $TARGET | grep "Readout\|Application")
 if [ -n "$Readout_TYPE" ]; then
@@ -112,19 +125,25 @@ if [ -n "$Readout_TYPE" ]; then
 fi
 
 devnum=$(echo "$NAME_FILE" | sed 's/.*_//' | cut -d'.' -f1)
-devtype_id=$(psql -U $Login -d $Name -p $Port -tA -c "SELECT devtype_id FROM devices_custs.device
+export PGPASSWORD=$Password
+devtype_id=$(psql -U $Login -h $Host -d $Name -p $Port -tA -c "SELECT devtype_id FROM devices_custs.device
 where devnum='$devnum';")
-id=$(psql -U $Login -d $Name -tA -c "select id from devices_custs.device
+unset PGPASSWORD
+export PGPASSWORD=$Password
+id=$(psql -U $Login -h $Host -p $Port -d $Name -tA -c "select id from devices_custs.device
 where devnum='$devnum';")
+unset PGPASSWORD
 if [ -z "$id" ]; then
-    echo -e "${RED}Данного прибора ($devnum) нет в базе данных.${NC}"
+    echo -e "${RED}Прибора $devnum нет в базе данных $Name.${NC}"
     echo ""
     # Запускаем подменю программы
     exit 0
 fi
-SIM_ACTIV=$(psql -U $Login -d $Name -p $Port -tA -c "select value from info_params.device_info_params
+export PGPASSWORD=$Password
+SIM_ACTIV=$(psql -U $Login -h $Host -d $Name -p $Port -tA -c "select value from info_params.device_info_params
 join dicts.attributes_dict on dicts.attributes_dict.id = info_params.device_info_params.attribute_id
 where device_id=$id and attribute_name='SIM_ACTIV';")
+unset PGPASSWORD
 
 mkdir $ACTIVE_DIR/Log 2>/dev/null
 # назватие модуля
@@ -160,17 +179,23 @@ if ! grep -q "$TYPE" <<< "$SMT_numbs"; then
     # Запускаем подменю программы
     exit 0
 fi
-
-echo ""
-echo -e "Обрабатываем файл: ${GREEN}$NAME_FILE${NC}"
-echo -e "Тип прибора: ${GREEN}SMT${NC}"
-echo -e "id прибора: ${GREEN}$id${NC}"
 #VER_PROTOCOL
 VER_PROTOCOL=$(cat $TARGET | grep protocol -i | grep -o '[0-9]\+')
 if [[ -z "$VER_PROTOCOL" ]]; then
     VER_PROTOCOL=0
 fi
+
+echo ""
+echo -e "Обрабатываем файл: ${GREEN}$NAME_FILE${NC}"
+echo -e "Тип прибора: ${GREEN}SMT${NC}"
+echo -e "id прибора: ${GREEN}$id${NC}"
 echo -e "Версия протокола: ${GREEN}$VER_PROTOCOL${NC}"
+echo ""
+echo -e "База данных: ${GREEN}$Name${NC}"
+echo -e "Имя пользователя: ${GREEN}$Login${NC}"
+echo -e "Пароль: ${GREEN}$Password${NC}"
+echo -e "Хост: ${GREEN}$Host${NC}"
+echo -e "Порт: ${GREEN}$Port${NC}"
 
 echo ""
 sleep 0.3
@@ -182,12 +207,19 @@ TIME_STR=$(date +"%H:%M:%S")
 echo "[$DATE_STR][$TIME_STR][$MODULE_NAME][Обрабатываем файл: $NAME_FILE]" >> $LOG
 echo "[$DATE_STR][$TIME_STR][$MODULE_NAME][Тип прибора: SMT]" >> $LOG
 echo "[$DATE_STR][$TIME_STR][$MODULE_NAME][id прибора: $id]" >> $LOG
-echo "[$DATE_STR][$TIME_STR][$MODULE_NAME]Версия протокола: $VER_PROTOCOL]" >> $LOG
+echo "[$DATE_STR][$TIME_STR][$MODULE_NAME][Версия протокола: $VER_PROTOCOL]" >> $LOG
+echo "[$DATE_STR][$TIME_STR][$MODULE_NAME][База данных: $Name]" >> $LOG
+echo "[$DATE_STR][$TIME_STR][$MODULE_NAME][Имя пользователя: $Login]" >> $LOG
+echo "[$DATE_STR][$TIME_STR][$MODULE_NAME][Пароль: $Password]" >> $LOG
+echo "[$DATE_STR][$TIME_STR][$MODULE_NAME][Хост: $Host]" >> $LOG
+echo "[$DATE_STR][$TIME_STR][$MODULE_NAME][Порт: $Port]" >> $LOG
 echo "[DEVICE DATA]" >> $LOG
 
 # Получения значения из БД
-DB_TYPE=$(psql -U $Login -d $Name -tA -c "SELECT devcode FROM dicts.devtypedict
+export PGPASSWORD=$Password
+DB_TYPE=$(psql -U $Login -h $Host -p $Port -d $Name -tA -c "SELECT devcode FROM dicts.devtypedict
 where id=$devtype_id;")
+unset PGPASSWORD
 sleep 0.1
 STR1="TYPE: $TYPE"
 STR2="TYPE: $DB_TYPE"
@@ -212,10 +244,10 @@ fi
 # SN
 SN=$(cat $TARGET | grep sn -i | grep -o '[0-9]\+')
 # Получения значения из БД
-#export PGPASSWORD='masterGazSetLogin'
-DB_SN=$(psql -U $Login -d $Name -tA -c "select devnum from devices_custs.device
+export PGPASSWORD=$Password
+DB_SN=$(psql -U $Login -h $Host -p $Port -d $Name -tA -c "select devnum from devices_custs.device
 where id=$id;")
-#unset PGPASSWORD
+unset PGPASSWORD
 
 STR1="SN: $SN"
 STR2="SN: $DB_SN"
@@ -250,10 +282,10 @@ else
 fi
 
     # Получения значения из БД
-#export PGPASSWORD='masterGazSetLogin'
-DB_VERS=$(psql -U $Login -d $Name -tA -c "select value from info_params.device_info_params
+    export PGPASSWORD=$Password
+DB_VERS=$(psql -U $Login -h $Host -p $Port -d $Name -tA -c "select value from info_params.device_info_params
 where device_id=$id and attribute_id=29;")
-#unset PGPASSWORD
+unset PGPASSWORD
 STR1="VERS: $VERS"
 STR2="VERS: $DB_VERS"
 sleep 0.2
@@ -277,10 +309,10 @@ fi
 #SIMIP
 SIMIP=$(cat $TARGET | grep simip -i | awk -F'=' '{print $2}')
 # Получения значения из БД
-#export PGPASSWORD='masterGazSetLogin'
-DB_SIMIP=$(psql -U $Login -d $Name -tA -c "select value from info_params.device_info_params
+export PGPASSWORD=$Password
+DB_SIMIP=$(psql -U $Login -h $Host -p $Port -d $Name -tA -c "select value from info_params.device_info_params
 where device_id=$id and attribute_id=48;")
-#unset PGPASSWORD
+unset PGPASSWORD
 STR1="SIMIP: $SIMIP"
 STR2="SIMIP: $DB_SIMIP"
 SIMIP_LOG=$(cat $TARGET | grep simip -i | grep -oE '[0-9]*\.[0-9]*\.[0-9]*\.[0-9]*')
@@ -326,8 +358,10 @@ IFS=';' read -r -a arr <<< "$ACTUAL_COUNTERS" # Преобразует стро�
 i=0
 # 1 STATUS_SYSTEM
 # Получения значения из БД
-DB_STATUS_SYSTEM=$(psql -U $Login -d $Name -p $Port -tA -c "select value from info_params.device_info_params
+export PGPASSWORD=$Password
+DB_STATUS_SYSTEM=$(psql -U $Login -d $Name -h $Host -p $Port -tA -c "select value from info_params.device_info_params
 where device_id=$id and attribute_id=71;")
+unset PGPASSWORD
 STR1=$((16#${arr[$i]}))
 STATUS_SYSTEM=$STR1
 STR1="STATUS_SYSTEM: $STR1"
@@ -365,8 +399,10 @@ fi
 
 # 2 VOLUME_PULSE
 # Получения значения из БД
-DB_VOLUME_PULSE=$(psql -U $Login -d $Name -p $Port -tA -c "select value from info_params.device_info_params
+export PGPASSWORD=$Password
+DB_VOLUME_PULSE=$(psql -U $Login -d $Name -h $Host -p $Port -tA -c "select value from info_params.device_info_params
 where device_id=$id and attribute_id=103;")
+unset PGPASSWORD
 STR1=$(echo "scale=4; 1 / ${arr[$i]}" | bc)
 VOLUME_PULSE=0$STR1
 if [[ $(echo "$DB_VOLUME_PULSE == 0.001 && $VOLUME_PULSE == 0.0010" | bc) -eq 1 ]]; then
@@ -404,8 +440,10 @@ fi
 
 # 3 CURRENT_COUNTER
 # Получения значения из БД
-DB_CURRENT_COUNTER=$(psql -U $Login -d $Name -p $Port -tA -c "select value from info_params.device_info_params
+export PGPASSWORD=$Password
+DB_CURRENT_COUNTER=$(psql -U $Login -d $Name -h $Host -p $Port -tA -c "select value from info_params.device_info_params
 where device_id=$id and attribute_id=37;")
+unset PGPASSWORD
 CURRENT_COUNTER=$(echo "scale=4; ${arr[$i]} * $VOLUME_PULSE" | bc)
 # Добавляем "0" если значение меньше единицы
 if [[ "$CURRENT_COUNTER" == .* ]]; then
@@ -444,8 +482,10 @@ fi
 
 # 4 DATETIME
 # Получения значения из БД
-DB_DATETIME=$(psql -U $Login -d $Name -p $Port -tA -c "select value from info_params.device_info_params
+export PGPASSWORD=$Password
+DB_DATETIME=$(psql -U $Login -d $Name -h $Host -p $Port -tA -c "select value from info_params.device_info_params
 where device_id=$id and attribute_id=33;")
+unset PGPASSWORD
 DATETIME=${arr[$i]}
 STR1="DATETIME: ${arr[$i]}"
 STR1=$(echo "$STR1" | awk -F'.' '{print $1"."$2".20"$3""$4}' | sed 's/,/ /g')
@@ -482,14 +522,18 @@ fi
 # 5 APN_ADDRESS
 if [ -z "$SIM_ACTIV" ]; then
 # Получения значения из БД
-    DB_APN_ADDRESS=$(psql -U $Login -d $Name -p $Port -tA -c "select value from info_params.device_info_params
+    export PGPASSWORD=$Password
+    DB_APN_ADDRESS=$(psql -U $Login -h $Host -p $Port -d $Name -tA -c "select value from info_params.device_info_params
     where device_id=$id and attribute_id=54;")
+    unset PGPASSWORD
 else
     # Получения значения из БД
-    DB_APN_ADDRESS=$(psql -U $Login -d $Name -p $Port -tA -c "select value from info_params.sim_info_params as si
+    export PGPASSWORD=$Password
+    DB_APN_ADDRESS=$(psql -U $Login -h $Host -p $Port -d $Name -tA -c "select value from info_params.sim_info_params as si
     join dicts.attributes_dict as ad on ad.id=si.attribute_id
     join devices_custs.device_sim as ds on ds.id=si.sim_id
     where ds.device_id=$id and attribute_id=54 and sim_num=$SIM_ACTIV;")
+    unset PGPASSWORD
 fi
 APN_ADDRESS=${arr[$i]}
 STR1="APN_ADDRESS: ${arr[$i]}"
@@ -525,14 +569,18 @@ fi
 
 # 6 APN_LOGIN
 if [ -z "$SIM_ACTIV" ]; then
-    DB_APN_LOGIN=$(psql -U $Login -d $Name -p $Port -tA -c "select value from info_params.device_info_params
+    export PGPASSWORD=$Password
+    DB_APN_LOGIN=$(psql -U $Login -h $Host -p $Port -d $Name -tA -c "select value from info_params.device_info_params
     where device_id=$id and attribute_id=52;")
+    unset PGPASSWORD
 else
     # Получения значения из БД
-    DB_APN_LOGIN=$(psql -U $Login -d $Name -p $Port -tA -c "select value from info_params.sim_info_params as si
+    export PGPASSWORD=$Password
+    DB_APN_LOGIN=$(psql -U $Login -h $Host -p $Port -d $Name -tA -c "select value from info_params.sim_info_params as si
     join dicts.attributes_dict as ad on ad.id=si.attribute_id
     join devices_custs.device_sim as ds on ds.id=si.sim_id
     where ds.device_id=$id and attribute_id=52 and sim_num=$SIM_ACTIV;")
+    unset PGPASSWORD
 fi
 APN_LOGIN=${arr[$i]}
 STR1="APN_LOGIN: ${arr[$i]}"
@@ -568,14 +616,18 @@ fi
 
 # 7 APN_PASSWORD
 if [ -z "$SIM_ACTIV" ]; then
-    DB_APN_PASSWORD=$(psql -U $Login -d $Name -p $Port -tA -c "select value from info_params.device_info_params
+    export PGPASSWORD=$Password
+    DB_APN_PASSWORD=$(psql -U $Login -h $Host -p $Port -d $Name -tA -c "select value from info_params.device_info_params
     where device_id=$id and attribute_id=53;")
+    unset PGPASSWORD
 else
     # Получения значения из БД
-    DB_APN_PASSWORD=$(psql -U $Login -d $Name -p $Port -tA -c "select value from info_params.sim_info_params as si
+    export PGPASSWORD=$Password
+    DB_APN_PASSWORD=$(psql -U $Login -h $Host -p $Port -d $Name -tA -c "select value from info_params.sim_info_params as si
     join dicts.attributes_dict as ad on ad.id=si.attribute_id
     join devices_custs.device_sim as ds on ds.id=si.sim_id
     where ds.device_id=$id and attribute_id=53 and sim_num=$SIM_ACTIV;")
+    unset PGPASSWORD
 fi
 APN_PASSWORD=${arr[$i]}
 STR1="APN_PASSWORD: ${arr[$i]}"
@@ -611,14 +663,18 @@ fi
 
 # 8 TCP_ADDRESS  //SERVER_URL
 if [ -z "$SIM_ACTIV" ]; then
-    DB_TCP_ADDRESS=$(psql -U $Login -d $Name -p $Port -tA -c "select value from info_params.device_info_params
+    export PGPASSWORD=$Password
+    DB_TCP_ADDRESS=$(psql -U $Login -h $Host -p $Port -d $Name -tA -c "select value from info_params.device_info_params
     where device_id=$id and attribute_id=55;")
+    unset PGPASSWORD
 else
     # Получения значения из БД
-    DB_TCP_ADDRESS=$(psql -U $Login -d $Name -p $Port -tA -c "select value from info_params.sim_info_params as si
+    export PGPASSWORD=$Password
+    DB_TCP_ADDRESS=$(psql -U $Login -h $Host -p $Port -d $Name -tA -c "select value from info_params.sim_info_params as si
     join dicts.attributes_dict as ad on ad.id=si.attribute_id
     join devices_custs.device_sim as ds on ds.id=si.sim_id
     where ds.device_id=$id and attribute_id=55 and sim_num=$SIM_ACTIV;")
+    unset PGPASSWORD
 fi
 TCP_ADDRESS=${arr[$i]}
 STR1="TCP_ADDRESS: ${arr[$i]}"
@@ -631,7 +687,7 @@ if echo "$STR1" | grep -wq "$STR2"; then
     # запись в log
     DATE_STR=$(date +"%d.%m.%Y")
     TIME_STR=$(date +"%H:%M:%S")
-    echo "[$DATE_STR][$TIME_STR][$MODULE_NAME][OK][Параметр №8 APN_PASSWORD: FILE-$TCP_ADDRESS DB-$DB_TCP_ADDRESS параметры совпали]" >> $LOG
+    echo "[$DATE_STR][$TIME_STR][$MODULE_NAME][OK][Параметр №8 TCP_ADDRESS: FILE-$TCP_ADDRESS DB-$DB_TCP_ADDRESS параметры совпали]" >> $LOG
     ((i++))
     if [ "$i" -ge "$COUNTERS" ]; then
         # Запускаем подменю программы
@@ -644,7 +700,7 @@ else
     # запись в log
     DATE_STR=$(date +"%d.%m.%Y")
     TIME_STR=$(date +"%H:%M:%S")
-    echo "[$DATE_STR][$TIME_STR][$MODULE_NAME][ERR][Параметр №8 APN_PASSWORD: FILE-$TCP_ADDRESS DB-$DB_TCP_ADDRESS параметры не совпали]" >> $LOG
+    echo "[$DATE_STR][$TIME_STR][$MODULE_NAME][ERR][Параметр №8 TCP_ADDRESS: FILE-$TCP_ADDRESS DB-$DB_TCP_ADDRESS параметры не совпали]" >> $LOG
     ((i++))
     if [ "$i" -ge "$COUNTERS" ]; then
         # Запускаем подменю программы
@@ -654,10 +710,12 @@ fi
 
 # 9 SMS_PHONE    //SMS_PHONE
 # Получения значения из БД
-#DB_SMS_PHONE=$(psql -U $Login -d $Name -p $Port -tA -c "select value from info_params.sim_info_params as si
+# export PGPASSWORD=$Password
+#DB_SMS_PHONE=$(psql -U $Login -h $Host -p $Port -d $Name -tA -c "select value from info_params.sim_info_params as si
 #join dicts.attributes_dict as ad on ad.id=si.attribute_id
 #join devices_custs.device_sim as ds on ds.id=si.sim_id
 #where ds.device_id=$id and attribute_id=55 and sim_num=$SIM_ACTIV;")
+# unset PGPASSWORD
 SMS_PHONE=${arr[$i]}
 STR1="SMS_PHONE: ${arr[$i]}"
 STR2="SMS_PHONE: $DB_SMS_PHONE"
@@ -669,7 +727,7 @@ if echo "$STR1" | grep -wq "$STR2"; then
     # запись в log
     DATE_STR=$(date +"%d.%m.%Y")
     TIME_STR=$(date +"%H:%M:%S")
-    echo "[$DATE_STR][$TIME_STR][$MODULE_NAME][OK][Параметр №9 APN_PASSWORD: FILE-$SMS_PHONE DB-$DB_SMS_PHONE параметры совпали]" >> $LOG
+    echo "[$DATE_STR][$TIME_STR][$MODULE_NAME][OK][Параметр №9 SMS_PHONE: FILE-$SMS_PHONE DB-$DB_SMS_PHONE параметры совпали]" >> $LOG
     ((i++))
     if [ "$i" -ge "$COUNTERS" ]; then
         # Запускаем подменю программы
@@ -682,7 +740,7 @@ else
     # запись в log
     DATE_STR=$(date +"%d.%m.%Y")
     TIME_STR=$(date +"%H:%M:%S")
-    echo "[$DATE_STR][$TIME_STR][$MODULE_NAME][ERR][Параметр №9 APN_PASSWORD: FILE-$SMS_PHONE DB-$DB_SMS_PHONE параметры не совпали]" >> $LOG
+    echo "[$DATE_STR][$TIME_STR][$MODULE_NAME][ERR][Параметр №9 SMS_PHONE: FILE-$SMS_PHONE DB-$DB_SMS_PHONE параметры не совпали]" >> $LOG
     ((i++))
     if [ "$i" -ge "$COUNTERS" ]; then
         # Запускаем подменю программы
@@ -692,14 +750,18 @@ fi
 
 # 10 BALANCE_PHONE     //BALANCE_PHONE
 if [ -z "$SIM_ACTIV" ]; then
-    DB_BALANCE_PHONE=$(psql -U $Login -d $Name -p $Port -tA -c "select value from info_params.device_info_params
+    export PGPASSWORD=$Password
+    DB_BALANCE_PHONE=$(psql -U $Login -h $Host -p $Port -d $Name -tA -c "select value from info_params.device_info_params
     where device_id=$id and attribute_id=41;")
+    unset PGPASSWORD
 else
     # Получения значения из БД
-    DB_BALANCE_PHONE=$(psql -U $Login -d $Name -p $Port -tA -c "select value from info_params.sim_info_params as si
+    export PGPASSWORD=$Password
+    DB_BALANCE_PHONE=$(psql -U $Login -h $Host -p $Port -d $Name -tA -c "select value from info_params.sim_info_params as si
     join dicts.attributes_dict as ad on ad.id=si.attribute_id
     join devices_custs.device_sim as ds on ds.id=si.sim_id
     where ds.device_id=$id and attribute_id=41 and sim_num=$SIM_ACTIV;")
+    unset PGPASSWORD
 fi
 BALANCE_PHONE=${arr[$i]}
 STR1="BALANCE_PHONE: ${arr[$i]}"
@@ -710,6 +772,10 @@ if [ -n "$select" ]; then
     echo -e "${GREEN}FILE ==>    $STR1${NC}"
     echo -e "${GREEN}DB   ==>    $STR2${NC}"
     echo "---------------------------"
+    # запись в log
+    DATE_STR=$(date +"%d.%m.%Y")
+    TIME_STR=$(date +"%H:%M:%S")
+    echo "[$DATE_STR][$TIME_STR][$MODULE_NAME][OK][Параметр №10 BALANCE_PHONE: FILE-$BALANCE_PHONE DB-$DB_BALANCE_PHONE параметры совпали]" >> $LOG
     ((i++))
     if [ "$i" -ge "$COUNTERS" ]; then
         # Запускаем подменю программы
@@ -719,6 +785,10 @@ else
     echo -e "${RED}FILE ==>    $STR1${NC}"
     echo -e "${RED}DB   ==>    $STR2${NC}"
     echo "---------------------------"
+    # запись в log
+    DATE_STR=$(date +"%d.%m.%Y")
+    TIME_STR=$(date +"%H:%M:%S")
+    echo "[$DATE_STR][$TIME_STR][$MODULE_NAME][ERR][Параметр №10 BALANCE_PHONE: FILE-$BALANCE_PHONE DB-$DB_BALANCE_PHONE параметры не совпали]" >> $LOG
     ((i++))
     if [ "$i" -ge "$COUNTERS" ]; then
         # Запускаем подменю программы
@@ -728,14 +798,18 @@ fi
 
 # 11 MODE_TRANSFER //MODE_TRANSFER
 if [ -z "$SIM_ACTIV" ]; then
-    DB_MODE_TRANSFER=$(psql -U $Login -d $Name -p $Port -tA -c "select value from info_params.device_info_params
+    export PGPASSWORD=$Password
+    DB_MODE_TRANSFER=$(psql -U $Login -h $Host -p $Port -d $Name -tA -c "select value from info_params.device_info_params
     where device_id=$id and attribute_id=42;")
+    unset PGPASSWORD
 else
     # Получения значения из БД
-    DB_MODE_TRANSFER=$(psql -U $Login -d $Name -p $Port -tA -c "select value from info_params.sim_info_params as si
+    export PGPASSWORD=$Password
+    DB_MODE_TRANSFER=$(psql -U $Login -h $Host -p $Port -d $Name -tA -c "select value from info_params.sim_info_params as si
     join dicts.attributes_dict as ad on ad.id=si.attribute_id
     join devices_custs.device_sim as ds on ds.id=si.sim_id
     where ds.device_id=$id and attribute_id=42 and sim_num=$SIM_ACTIV;")
+    unset PGPASSWORD
 fi
 MODE_TRANSFER=${arr[$i]}
 STR1="MODE_TRANSFER: ${arr[$i]}"
@@ -745,6 +819,10 @@ if echo "$STR1" | grep -wq "$STR2"; then
     echo -e "${GREEN}FILE ==>    $STR1${NC}"
     echo -e "${GREEN}DB   ==>    $STR2${NC}"
     echo "---------------------------"
+    # запись в log
+    DATE_STR=$(date +"%d.%m.%Y")
+    TIME_STR=$(date +"%H:%M:%S")
+    echo "[$DATE_STR][$TIME_STR][$MODULE_NAME][OK][Параметр №11 MODE_TRANSFER: FILE-$MODE_TRANSFER DB-$DB_MODE_TRANSFER параметры совпали]" >> $LOG
     ((i++))
     if [ "$i" -ge "$COUNTERS" ]; then
         # Запускаем подменю программы
@@ -754,6 +832,10 @@ else
     echo -e "${RED}FILE ==>    $STR1${NC}"
     echo -e "${RED}DB   ==>    $STR2${NC}"
     echo "---------------------------"
+    # запись в log
+    DATE_STR=$(date +"%d.%m.%Y")
+    TIME_STR=$(date +"%H:%M:%S")
+    echo "[$DATE_STR][$TIME_STR][$MODULE_NAME][ERR][Параметр №11 MODE_TRANSFER: FILE-$MODE_TRANSFER DB-$DB_MODE_TRANSFER параметры не совпали]" >> $LOG
     ((i++))
     if [ "$i" -ge "$COUNTERS" ]; then
         # Запускаем подменю программы
@@ -763,9 +845,11 @@ fi
 
 # 12 BATTERY   //BATTERY
 # Получения значения из БД
-DB_BATTERY=$(psql -U $Login -d $Name -p $Port -tA -c "select value from info_params.device_info_params
+export PGPASSWORD=$Password
+DB_BATTERY=$(psql -U $Login -h $Host -p $Port -d $Name -tA -c "select value from info_params.device_info_params
 join dicts.attributes_dict on dicts.attributes_dict.id = info_params.device_info_params.attribute_id
 where device_id=$id and attribute_id=57;")
+unset PGPASSWORD
 BATTERY=$(echo "scale=3; ${arr[$i]} / 1000" | bc)
 # Добавляем "0" если значение меньше единицы
 if [[ "$BATTERY" == .* ]]; then
@@ -778,6 +862,10 @@ if echo "$STR1" | grep -wq "$STR2"; then
     echo -e "${GREEN}FILE ==>    $STR1${NC}"
     echo -e "${GREEN}DB   ==>    $STR2${NC}"
     echo "---------------------------"
+    # запись в log
+    DATE_STR=$(date +"%d.%m.%Y")
+    TIME_STR=$(date +"%H:%M:%S")
+    echo "[$DATE_STR][$TIME_STR][$MODULE_NAME][OK][Параметр №12 BATTERY: FILE-$BATTERY DB-$DB_BATTERY параметры совпали]" >> $LOG
     ((i++))
     if [ "$i" -ge "$COUNTERS" ]; then
         # Запускаем подменю программы
@@ -787,6 +875,10 @@ else
     echo -e "${RED}FILE ==>    $STR1${NC}"
     echo -e "${RED}DB   ==>    $STR2${NC}"
     echo "---------------------------"
+    # запись в log
+    DATE_STR=$(date +"%d.%m.%Y")
+    TIME_STR=$(date +"%H:%M:%S")
+    echo "[$DATE_STR][$TIME_STR][$MODULE_NAME][ERR][Параметр №12 BATTERY: FILE-$BATTERY DB-$DB_BATTERY параметры не совпали]" >> $LOG
     ((i++))
     if [ "$i" -ge "$COUNTERS" ]; then
         # Запускаем подменю программы
@@ -796,9 +888,11 @@ fi
 
 # 13 SENSOR_TEMP   //TEMP_SENSOR
 # Получения значения из БД
-DB_SENSOR_TEMP=$(psql -U $Login -d $Name -p $Port -tA -c "select value from info_params.device_info_params
+export PGPASSWORD=$Password
+DB_SENSOR_TEMP=$(psql -U $Login -h $Host -p $Port -d $Name -tA -c "select value from info_params.device_info_params
 join dicts.attributes_dict on dicts.attributes_dict.id = info_params.device_info_params.attribute_id
 where device_id=$id and attribute_id=59;")
+unset PGPASSWORD
 SENSOR_TEMP=${arr[$i]}
 STR1="SENSOR_TEMP: ${arr[$i]}"
 STR2="SENSOR_TEMP: $DB_SENSOR_TEMP"
@@ -807,6 +901,10 @@ if echo "$STR1" | grep -wq "$STR2"; then
     echo -e "${GREEN}FILE ==>    $STR1${NC}"
     echo -e "${GREEN}DB   ==>    $STR2${NC}"
     echo "---------------------------"
+    # запись в log
+    DATE_STR=$(date +"%d.%m.%Y")
+    TIME_STR=$(date +"%H:%M:%S")
+    echo "[$DATE_STR][$TIME_STR][$MODULE_NAME][OK][Параметр №13 APN_PASSWORD: FILE-$BATTERY DB-$DB_BATTERY параметры совпали]" >> $LOG
     ((i++))
     if [ "$i" -ge "$COUNTERS" ]; then
         # Запускаем подменю программы
@@ -816,6 +914,10 @@ else
     echo -e "${RED}FILE ==>    $STR1${NC}"
     echo -e "${RED}DB   ==>    $STR2${NC}"
     echo "---------------------------"
+    # запись в log
+    DATE_STR=$(date +"%d.%m.%Y")
+    TIME_STR=$(date +"%H:%M:%S")
+    echo "[$DATE_STR][$TIME_STR][$MODULE_NAME][ERR][Параметр №13 APN_PASSWORD: FILE-$BATTERY DB-$DB_BATTERY параметры не совпали]" >> $LOG
     ((i++))
     if [ "$i" -ge "$COUNTERS" ]; then
         # Запускаем подменю программы
@@ -825,14 +927,18 @@ fi
 
 # 14 RESERVE_INTERVAL   //RESERVED_INT
 if [ -z "$SIM_ACTIV" ]; then
-    DB_MODE_TRANSFER=$(psql -U $Login -d $Name -p $Port -tA -c "select value from info_params.device_info_params
+    export PGPASSWORD=$Password
+    DB_MODE_TRANSFER=$(psql -U $Login -h $Host -p $Port -d $Name -tA -c "select value from info_params.device_info_params
     where device_id=$id and attribute_id=99;")
+    unset PGPASSWORD
 else
     # Получения значения из БД
-    DB_RESERVE_INTERVAL=$(psql -U $Login -d $Name -p $Port -tA -c "select value from info_params.sim_info_params as si
+    export PGPASSWORD=$Password
+    DB_RESERVE_INTERVAL=$(psql -U $Login -h $Host -p $Port -d $Name -tA -c "select value from info_params.sim_info_params as si
     join dicts.attributes_dict as ad on ad.id=si.attribute_id
     join devices_custs.device_sim as ds on ds.id=si.sim_id
     where ds.device_id=$id and attribute_id=99 and sim_num=$SIM_ACTIV;")
+    unset PGPASSWORD
 fi
 RESERVE_INTERVAL=${arr[$i]}
 STR1="RESERVE_INTERVAL: ${arr[$i]}"
@@ -842,6 +948,10 @@ if echo "$STR1" | grep -wq "$STR2"; then
     echo -e "${GREEN}FILE ==>    $STR1${NC}"
     echo -e "${GREEN}DB   ==>    $STR2${NC}"
     echo "---------------------------"
+    # запись в log
+    DATE_STR=$(date +"%d.%m.%Y")
+    TIME_STR=$(date +"%H:%M:%S")
+    echo "[$DATE_STR][$TIME_STR][$MODULE_NAME][OK][Параметр №14 RESERVE_INTERVAL: FILE-$RESERVE_INTERVAL DB-$DB_RESERVE_INTERVAL параметры совпали]" >> $LOG
     ((i++))
     if [ "$i" -ge "$COUNTERS" ]; then
         # Запускаем подменю программы
@@ -851,6 +961,10 @@ else
     echo -e "${RED}FILE ==>    $STR1${NC}"
     echo -e "${RED}DB   ==>    $STR2${NC}"
     echo "---------------------------"
+    # запись в log
+    DATE_STR=$(date +"%d.%m.%Y")
+    TIME_STR=$(date +"%H:%M:%S")
+    echo "[$DATE_STR][$TIME_STR][$MODULE_NAME][ERR][Параметр №14 RESERVE_INTERVAL: FILE-$RESERVE_INTERVAL DB-$DB_RESERVE_INTERVAL параметры не совпали]" >> $LOG
     ((i++))
     if [ "$i" -ge "$COUNTERS" ]; then
         # Запускаем подменю программы
@@ -860,8 +974,10 @@ fi
 
 # 15 SEANCECNT_MAX  //MAX_SESSION
 # Получения значения из БД
-DB_SEANCECNT_MAX=$(psql -U $Login -d $Name -p $Port -tA -c "select value from info_params.device_info_params
+export PGPASSWORD=$Password
+DB_SEANCECNT_MAX=$(psql -U $Login -h $Host -p $Port -d $Name -tA -c "select value from info_params.device_info_params
 where device_id=$id and attribute_id=46;")
+unset PGPASSWORD
 SEANCECNT_MAX=${arr[$i]}
 STR1="SEANCECNT_MAX: ${arr[$i]}"
 STR2="SEANCECNT_MAX: $DB_SEANCECNT_MAX"
@@ -870,6 +986,10 @@ if echo "$STR1" | grep -wq "$STR2"; then
     echo -e "${GREEN}FILE ==>    $STR1${NC}"
     echo -e "${GREEN}DB   ==>    $STR2${NC}"
     echo "---------------------------"
+    # запись в log
+    DATE_STR=$(date +"%d.%m.%Y")
+    TIME_STR=$(date +"%H:%M:%S")
+    echo "[$DATE_STR][$TIME_STR][$MODULE_NAME][OK][Параметр №15 SEANCECNT_MAX: FILE-$SEANCECNT_MAX DB-$DB_SEANCECNT_MAX параметры совпали]" >> $LOG
     ((i++))
     if [ "$i" -ge "$COUNTERS" ]; then
         # Запускаем подменю программы
@@ -879,6 +999,10 @@ else
     echo -e "${RED}FILE ==>    $STR1${NC}"
     echo -e "${RED}DB   ==>    $STR2${NC}"
     echo "---------------------------"
+    # запись в log
+    DATE_STR=$(date +"%d.%m.%Y")
+    TIME_STR=$(date +"%H:%M:%S")
+    echo "[$DATE_STR][$TIME_STR][$MODULE_NAME][ERR][Параметр №15 SEANCECNT_MAX: FILE-$SEANCECNT_MAX DB-$DB_SEANCECNT_MAX параметры не совпали]" >> $LOG
     ((i++))
     if [ "$i" -ge "$COUNTERS" ]; then
         # Запускаем подменю программы
@@ -888,14 +1012,18 @@ fi
 
 # 16 SEANCECNT  //COUNT_SESSION
 if [ -z "$SIM_ACTIV" ]; then
-DB_SEANCECNT=$(psql -U $Login -d $Name -p $Port -tA -c "select value from info_params.device_info_params
-where device_id=$id and attribute_id=44;")
+    export PGPASSWORD=$Password
+    DB_SEANCECNT=$(psql -U $Login -h $Host -p $Port -d $Name -tA -c "select value from info_params.device_info_params
+    where device_id=$id and attribute_id=44;")
+    unset PGPASSWORD
 else
-# Получения значения из БД
-DB_SEANCECNT=$(psql -U $Login -d $Name -p $Port -tA -c "select value from info_params.sim_info_params as si
-join dicts.attributes_dict as ad on ad.id=si.attribute_id
-join devices_custs.device_sim as ds on ds.id=si.sim_id
-where ds.device_id=$id and attribute_id=44 and sim_num=$SIM_ACTIV;")
+    # Получения значения из БД
+    export PGPASSWORD=$Password
+    DB_SEANCECNT=$(psql -U $Login -h $Host -p $Port -d $Name -tA -c "select value from info_params.sim_info_params as si
+    join dicts.attributes_dict as ad on ad.id=si.attribute_id
+    join devices_custs.device_sim as ds on ds.id=si.sim_id
+    where ds.device_id=$id and attribute_id=44 and sim_num=$SIM_ACTIV;")
+    unset PGPASSWORD
 fi
 SEANCECNT=${arr[$i]}
 STR1="SEANCECNT: ${arr[$i]}"
@@ -905,6 +1033,10 @@ if echo "$STR1" | grep -wq "$STR2"; then
     echo -e "${GREEN}FILE ==>    $STR1${NC}"
     echo -e "${GREEN}DB   ==>    $STR2${NC}"
     echo "---------------------------"
+    # запись в log
+    DATE_STR=$(date +"%d.%m.%Y")
+    TIME_STR=$(date +"%H:%M:%S")
+    echo "[$DATE_STR][$TIME_STR][$MODULE_NAME][OK][Параметр №16 SEANCECNT: FILE-$SEANCECNT DB-$DB_SEANCECNT параметры совпали]" >> $LOG
     ((i++))
     if [ "$i" -ge "$COUNTERS" ]; then
         # Запускаем подменю программы
@@ -914,6 +1046,10 @@ else
     echo -e "${RED}FILE ==>    $STR1${NC}"
     echo -e "${RED}DB   ==>    $STR2${NC}"
     echo "---------------------------"
+    # запись в log
+    DATE_STR=$(date +"%d.%m.%Y")
+    TIME_STR=$(date +"%H:%M:%S")
+    echo "[$DATE_STR][$TIME_STR][$MODULE_NAME][ERR][Параметр №16 SEANCECNT: FILE-$SEANCECNT DB-$DB_SEANCECNT параметры не совпали]" >> $LOG
     ((i++))
     if [ "$i" -ge "$COUNTERS" ]; then
         # Запускаем подменю программы
@@ -923,14 +1059,18 @@ fi
 
 # 17 SEANCECNT_ERR  //ERROR_SESSION
 if [ -z "$SIM_ACTIV" ]; then
-DB_SEANCECNT_ERR=$(psql -U $Login -d $Name -p $Port -tA -c "select value from info_params.device_info_params
-where device_id=$id and attribute_id=45;")
+    export PGPASSWORD=$Password
+    DB_SEANCECNT_ERR=$(psql -U $Login -h $Host -p $Port -d $Name -tA -c "select value from info_params.device_info_params
+    where device_id=$id and attribute_id=45;")
+    unset PGPASSWORD
 else
-# Получения значения из БД
-DB_SEANCECNT_ERR=$(psql -U $Login -d $Name -p $Port -tA -c "select value from info_params.sim_info_params as si
-join dicts.attributes_dict as ad on ad.id=si.attribute_id
-join devices_custs.device_sim as ds on ds.id=si.sim_id
-where ds.device_id=$id and attribute_id=45 and sim_num=$SIM_ACTIV;")
+    # Получения значения из БД
+    export PGPASSWORD=$Password
+    DB_SEANCECNT_ERR=$(psql -U $Login -h $Host -p $Port -d $Name -tA -c "select value from info_params.sim_info_params as si
+    join dicts.attributes_dict as ad on ad.id=si.attribute_id
+    join devices_custs.device_sim as ds on ds.id=si.sim_id
+    where ds.device_id=$id and attribute_id=45 and sim_num=$SIM_ACTIV;")
+    unset PGPASSWORD
 fi
 SEANCECNT_ERR=${arr[$i]}
 STR1="SEANCECNT_ERR: ${arr[$i]}"
@@ -940,6 +1080,10 @@ if echo "$STR1" | grep -wq "$STR2"; then
     echo -e "${GREEN}FILE ==>    $STR1${NC}"
     echo -e "${GREEN}DB   ==>    $STR2${NC}"
     echo "---------------------------"
+    # запись в log
+    DATE_STR=$(date +"%d.%m.%Y")
+    TIME_STR=$(date +"%H:%M:%S")
+    echo "[$DATE_STR][$TIME_STR][$MODULE_NAME][OK][Параметр №17 SEANCECNT_ERR: FILE-$SEANCECNT_ERR DB-$DB_SEANCECNT_ERR параметры совпали]" >> $LOG
     ((i++))
     if [ "$i" -ge "$COUNTERS" ]; then
         # Запускаем подменю программы
@@ -949,6 +1093,10 @@ else
     echo -e "${RED}FILE ==>    $STR1${NC}"
     echo -e "${RED}DB   ==>    $STR2${NC}"
     echo "---------------------------"
+    # запись в log
+    DATE_STR=$(date +"%d.%m.%Y")
+    TIME_STR=$(date +"%H:%M:%S")
+    echo "[$DATE_STR][$TIME_STR][$MODULE_NAME][ERR][Параметр №17 SEANCECNT_ERR: FILE-$SEANCECNT_ERR DB-$DB_SEANCECNT_ERR параметры не совпали]" >> $LOG
     ((i++))
     if [ "$i" -ge "$COUNTERS" ]; then
         # Запускаем подменю программы
@@ -958,8 +1106,10 @@ fi
 
 # 18 GAS_DAY    //GAS_DAY
 # Получения значения из БД
-DB_GAS_DAY=$(psql -U $Login -d $Name -p $Port -tA -c "SELECT gasbegin FROM devices_custs.device_static_params
+export PGPASSWORD=$Password
+DB_GAS_DAY=$(psql -U $Login -h $Host -p $Port -d $Name -tA -c "SELECT gasbegin FROM devices_custs.device_static_params
 where device_id=$id;")
+unset PGPASSWORD
 GAS_DAY=${arr[$i]}:00:00
 STR1="GAS_DAY: $GAS_DAY"
 STR2="GAS_DAY: $DB_GAS_DAY"
@@ -968,6 +1118,10 @@ if echo "$STR1" | grep -wq "$STR2"; then
     echo -e "${GREEN}FILE ==>    $STR1${NC}"
     echo -e "${GREEN}DB   ==>    $STR2${NC}"
     echo "---------------------------"
+    # запись в log
+    DATE_STR=$(date +"%d.%m.%Y")
+    TIME_STR=$(date +"%H:%M:%S")
+    echo "[$DATE_STR][$TIME_STR][$MODULE_NAME][OK][Параметр №18 GAS_DAY: FILE-$GAS_DAY DB-$DB_GAS_DAY параметры совпали]" >> $LOG
     ((i++))
     if [ "$i" -ge "$COUNTERS" ]; then
         # Запускаем подменю программы
@@ -977,6 +1131,10 @@ else
     echo -e "${RED}FILE ==>    $STR1${NC}"
     echo -e "${RED}DB   ==>    $STR2${NC}"
     echo "---------------------------"
+    # запись в log
+    DATE_STR=$(date +"%d.%m.%Y")
+    TIME_STR=$(date +"%H:%M:%S")
+    echo "[$DATE_STR][$TIME_STR][$MODULE_NAME][ERR][Параметр №18 GAS_DAY: FILE-$GAS_DAY DB-$DB_GAS_DAY параметры не совпали]" >> $LOG
     ((i++))
     if [ "$i" -ge "$COUNTERS" ]; then
         # Запускаем подменю программы
@@ -986,8 +1144,10 @@ fi
 
 # 19 HWVERSION  //HW_VER
 # Получения значения из БД
-DB_HWVERSION=$(psql -U $Login -d $Name -p $Port -tA -c "select value from info_params.device_info_params
+export PGPASSWORD=$Password
+DB_HWVERSION=$(psql -U $Login -h $Host -p $Port -d $Name -tA -c "select value from info_params.device_info_params
 where device_id=$id and attribute_id=100;")
+unset PGPASSWORD
 SEANCECNT_MAX=${arr[$i]}
 STR1="HWVERSION: ${arr[$i]}"
 STR2="HWVERSION: $DB_HWVERSION"
@@ -996,6 +1156,10 @@ if echo "$STR1" | grep -wq "$STR2"; then
     echo -e "${GREEN}FILE ==>    $STR1${NC}"
     echo -e "${GREEN}DB   ==>    $STR2${NC}"
     echo "---------------------------"
+    # запись в log
+    DATE_STR=$(date +"%d.%m.%Y")
+    TIME_STR=$(date +"%H:%M:%S")
+    echo "[$DATE_STR][$TIME_STR][$MODULE_NAME][OK][Параметр №19 HWVERSION: FILE-$HWVERSION DB-$DB_HWVERSION параметры совпали]" >> $LOG
     ((i++))
     if [ "$i" -ge "$COUNTERS" ]; then
         # Запускаем подменю программы
@@ -1005,6 +1169,10 @@ else
     echo -e "${RED}FILE ==>    $STR1${NC}"
     echo -e "${RED}DB   ==>    $STR2${NC}"
     echo "---------------------------"
+    # запись в log
+    DATE_STR=$(date +"%d.%m.%Y")
+    TIME_STR=$(date +"%H:%M:%S")
+    echo "[$DATE_STR][$TIME_STR][$MODULE_NAME][ERR][Параметр №19 HWVERSION: FILE-$HWVERSION DB-$DB_HWVERSION параметры не совпали]" >> $LOG
     ((i++))
     if [ "$i" -ge "$COUNTERS" ]; then
         # Запускаем подменю программы
@@ -1014,14 +1182,18 @@ fi
 
 # 20 AUTOSWITH  //AUTO_SWITCH_MODE
 if [ -z "$SIM_ACTIV" ]; then
-DB_AUTOSWITH=$(psql -U $Login -d $Name -p $Port -tA -c "select value from info_params.device_info_params
-where device_id=$id and attribute_id=101;")
+    export PGPASSWORD=$Password
+    DB_AUTOSWITH=$(psql -U $Login -h $Host -p $Port -d $Name -tA -c "select value from info_params.device_info_params
+    where device_id=$id and attribute_id=101;")
+    unset PGPASSWORD
 else
-# Получения значения из БД
-DB_AUTOSWITH=$(psql -U $Login -d $Name -p $Port -tA -c "select value from info_params.sim_info_params as si
-join dicts.attributes_dict as ad on ad.id=si.attribute_id
-join devices_custs.device_sim as ds on ds.id=si.sim_id
-where ds.device_id=$id and attribute_id=101 and sim_num=$SIM_ACTIV;")
+    # Получения значения из БД
+    export PGPASSWORD=$Password
+    DB_AUTOSWITH=$(psql -U $Login -h $Host -p $Port -d $Name -tA -c "select value from info_params.sim_info_params as si
+    join dicts.attributes_dict as ad on ad.id=si.attribute_id
+    join devices_custs.device_sim as ds on ds.id=si.sim_id
+    where ds.device_id=$id and attribute_id=101 and sim_num=$SIM_ACTIV;")
+    unset PGPASSWORD
 fi
 AUTOSWITH=${arr[$i]}
 STR1="AUTOSWITH: ${arr[$i]}"
@@ -1031,6 +1203,10 @@ if echo "$STR1" | grep -wq "$STR2"; then
     echo -e "${GREEN}FILE ==>    $STR1${NC}"
     echo -e "${GREEN}DB   ==>    $STR2${NC}"
     echo "---------------------------"
+    # запись в log
+    DATE_STR=$(date +"%d.%m.%Y")
+    TIME_STR=$(date +"%H:%M:%S")
+    echo "[$DATE_STR][$TIME_STR][$MODULE_NAME][OK][Параметр №20 AUTOSWITH: FILE-$AUTOSWITH DB-$DB_AUTOSWITH параметры совпали]" >> $LOG
     ((i++))
     if [ "$i" -ge "$COUNTERS" ]; then
         # Запускаем подменю программы
@@ -1040,6 +1216,10 @@ else
     echo -e "${RED}FILE ==>    $STR1${NC}"
     echo -e "${RED}DB   ==>    $STR2${NC}"
     echo "---------------------------"
+    # запись в log
+    DATE_STR=$(date +"%d.%m.%Y")
+    TIME_STR=$(date +"%H:%M:%S")
+    echo "[$DATE_STR][$TIME_STR][$MODULE_NAME][ERR][Параметр №20 AUTOSWITH: FILE-$AUTOSWITH DB-$DB_AUTOSWITH параметры не совпали]" >> $LOG
     ((i++))
     if [ "$i" -ge "$COUNTERS" ]; then
         # Запускаем подменю программы
@@ -1049,8 +1229,10 @@ fi
 
 # 21 LASTCHANGEARCNUM   //ARC_CHANGE_LASTREC
 # Получения значения из БД
-DB_LASTCHANGEARCNUM=$(psql -U $Login -d $Name -p $Port -tA -c "select value from info_params.device_info_params
+export PGPASSWORD=$Password
+DB_LASTCHANGEARCNUM=$(psql -U $Login -h $Host -p $Port -d $Name -tA -c "select value from info_params.device_info_params
 where device_id=$id and attribute_id=87;")
+unset PGPASSWORD
 LASTCHANGEARCNUM=${arr[$i]}
 STR1="LASTCHANGEARCNUM: ${arr[$i]}"
 STR2="LASTCHANGEARCNUM: $DB_LASTCHANGEARCNUM"
@@ -1079,8 +1261,10 @@ fi
 if [ -n "$VERS_S" ]; then
 if (( $(echo "$VERS_S < 1.273700" | bc -l) )); then
     # Получения значения из БД
-    DB_LASTSYSARCNUM=$(psql -U $Login -d $Name -p $Port -tA -c "select value from info_params.device_info_params
+    export PGPASSWORD=$Password
+    DB_LASTSYSARCNUM=$(psql -U $Login -h $Host -p $Port -d $Name -tA -c "select value from info_params.device_info_params
     where device_id=$id and attribute_id=2684;")
+    unset PGPASSWORD
     LASTSYSARCNUM=${arr[$i]}
     STR1="LASTEVENTARCNUM: ${arr[$i]}"
     STR2="LASTEVENTARCNUM: $DB_LASTSYSARCNUM"
@@ -1106,8 +1290,10 @@ if (( $(echo "$VERS_S < 1.273700" | bc -l) )); then
         fi
 else
     # Получения значения из БД
-    DB_LASTSYSARCNUM=$(psql -U $Login -d $Name -p $Port -tA -c "select value from info_params.device_info_params
+    export PGPASSWORD=$Password
+    DB_LASTSYSARCNUM=$(psql -U $Login -h $Host -p $Port -d $Name -tA -c "select value from info_params.device_info_params
     where device_id=$id and attribute_id=82;")
+    unset PGPASSWORD
     LASTSYSARCNUM=${arr[$i]}
     STR1="LASTSYSARCNUM: ${arr[$i]}"
     STR2="LASTSYSARCNUM: $DB_LASTSYSARCNUM"
@@ -1134,8 +1320,10 @@ else
 fi
 else
     # Получения значения из БД
-    DB_LASTSYSARCNUM=$(psql -U $Login -d $Name -p $Port -tA -c "select value from info_params.device_info_params
+    export PGPASSWORD=$Password
+    DB_LASTSYSARCNUM=$(psql -U $Login -h $Host -p $Port -d $Name -tA -c "select value from info_params.device_info_params
     where device_id=$id and attribute_id=82;")
+    unset PGPASSWORD
     LASTSYSARCNUM=${arr[$i]}
     STR1="LASTSYSARCNUM: ${arr[$i]}"
     STR2="LASTSYSARCNUM: $DB_LASTSYSARCNUM"
@@ -1162,8 +1350,10 @@ else
 fi
 # 23 LASTHOURARCNUM //ARC_HOUR_LASTREC
 # Получения значения из БД
-DB_LASTHOURARCNUM=$(psql -U $Login -d $Name -p $Port -tA -c "select value from info_params.device_info_params
+export PGPASSWORD=$Password
+DB_LASTHOURARCNUM=$(psql -U $Login -h $Host -p $Port -d $Name -tA -c "select value from info_params.device_info_params
 where device_id=$id and attribute_id=86;")
+unset PGPASSWORD
 LASTHOURARCNUM=${arr[$i]}
 STR1="LASTHOURARCNUM: ${arr[$i]}"
 STR2="LASTHOURARCNUM: $DB_LASTHOURARCNUM"
@@ -1190,8 +1380,10 @@ fi
 
 # 24 LASTDAYARCNUM  //ARC_DAY_LASTREC
 # Получения значения из БД
-DB_LASTDAYARCNUM=$(psql -U $Login -d $Name -p $Port -tA -c "select value from info_params.device_info_params
+export PGPASSWORD=$Password
+DB_LASTDAYARCNUM=$(psql -U $Login -h $Host -p $Port -d $Name -tA -c "select value from info_params.device_info_params
 where device_id=$id and attribute_id=84;")
+unset PGPASSWORD
 LASTDAYARCNUM=${arr[$i]}
 STR1="LASTDAYARCNUM: ${arr[$i]}"
 STR2="LASTDAYARCNUM: $DB_LASTDAYARCNUM"
@@ -1218,8 +1410,10 @@ fi
 
 # 25 P_ABS  //PABS
 # Получения значения из БД
-DB_P_ABS=$(psql -U $Login -d $Name -p $Port -tA -c "select value from info_params.device_info_params
+export PGPASSWORD=$Password
+DB_P_ABS=$(psql -U $Login -h $Host -p $Port -d $Name -tA -c "select value from info_params.device_info_params
 where device_id=$id and attribute_id=2667;")
+unset PGPASSWORD
 P_ABS=${arr[$i]}
 STR1="P_ABS: ${arr[$i]}"
 STR2="P_ABS: $DB_P_ABS"
@@ -1246,8 +1440,10 @@ fi
 
 # 26 LASTVALVECMD   //VALVE_SRV_CMD
 # Получения значения из БД
-DB_LASTVALVECMD=$(psql -U $Login -d $Name -p $Port -tA -c "select value from info_params.device_info_params
+export PGPASSWORD=$Password
+DB_LASTVALVECMD=$(psql -U $Login -h $Host -p $Port -d $Name -tA -c "select value from info_params.device_info_params
 where device_id=$id and attribute_id=2685;")
+unset PGPASSWORD
 LASTVALVECMD=${arr[$i]}
 STR1="LASTVALVECMD: ${arr[$i]}"
 STR2="LASTVALVECMD: $DB_LASTVALVECMD"
@@ -1274,8 +1470,10 @@ fi
 
 # 27 VALVESTATE //VALVE_STATE
 # Получения значения из БД
-DB_VALVESTATE=$(psql -U $Login -d $Name -p $Port -tA -c "select value from info_params.device_info_params
+export PGPASSWORD=$Password
+DB_VALVESTATE=$(psql -U $Login -h $Host -p $Port -d $Name -tA -c "select value from info_params.device_info_params
 where device_id=$id and attribute_id=72;")
+unset PGPASSWORD
 VALVESTATE=${arr[$i]}
 STR1="VALVESTATE: ${arr[$i]}"
 STR2="VALVESTATE: $DB_VALVESTATE"
@@ -1302,14 +1500,18 @@ fi
 
 # 28 CNT_FAIL_SIM   //COUNT_FAIL_SIM
 if [ -z "$SIM_ACTIV" ]; then
-DB_CNT_FAIL_SIM=$(psql -U $Login -d $Name -p $Port -tA -c "select value from info_params.device_info_params
-where device_id=$id and attribute_id=2669;")
+    export PGPASSWORD=$Password
+    DB_CNT_FAIL_SIM=$(psql -U $Login -h $Host -p $Port -d $Name -tA -c "select value from info_params.device_info_params
+    where device_id=$id and attribute_id=2669;")
+    unset PGPASSWORD
 else
-# Получения значения из БД
-DB_CNT_FAIL_SIM=$(psql -U $Login -d $Name -p $Port -tA -c "select value from info_params.sim_info_params as si
-join dicts.attributes_dict as ad on ad.id=si.attribute_id
-join devices_custs.device_sim as ds on ds.id=si.sim_id
-where ds.device_id=$id and attribute_id=2669 and sim_num=$SIM_ACTIV;")
+    # Получения значения из БД
+    export PGPASSWORD=$Password
+    DB_CNT_FAIL_SIM=$(psql -U $Login -h $Host -p $Port -d $Name -tA -c "select value from info_params.sim_info_params as si
+    join dicts.attributes_dict as ad on ad.id=si.attribute_id
+    join devices_custs.device_sim as ds on ds.id=si.sim_id
+    where ds.device_id=$id and attribute_id=2669 and sim_num=$SIM_ACTIV;")
+    unset PGPASSWORD
 fi
 CNT_FAIL_SIM=${arr[$i]}
 STR1="CNT_FAIL_SIM: ${arr[$i]}"
@@ -1337,8 +1539,10 @@ fi
 
 # 29 CNT_FAIL_SPEED //COUNT_FAIL_SPEED
 # Получения значения из БД
-DB_CNT_FAIL_SPEED=$(psql -U $Login -d $Name -p $Port -tA -c "select value from info_params.device_info_params
+export PGPASSWORD=$Password
+DB_CNT_FAIL_SPEED=$(psql -U $Login -h $Host -p $Port -d $Name -tA -c "select value from info_params.device_info_params
 where device_id=$id and attribute_id=2670;")
+unset PGPASSWORD
 CNT_FAIL_SPEED=${arr[$i]}
 STR1="CNT_FAIL_SPEED: ${arr[$i]}"
 STR2="CNT_FAIL_SPEED: $DB_CNT_FAIL_SPEED"
@@ -1365,8 +1569,10 @@ fi
 
 # 30 VALVE_AUTO_CTL //VALVE_AUTO_CONTROL
 # Получения значения из БД
-DB_VALVE_AUTO_CTL=$(psql -U $Login -d $Name -p $Port -tA -c "select value from info_params.device_info_params
+export PGPASSWORD=$Password
+DB_VALVE_AUTO_CTL=$(psql -U $Login -h $Host -p $Port -d $Name -tA -c "select value from info_params.device_info_params
 where device_id=$id and attribute_id=2671;")
+unset PGPASSWORD
 VALVE_AUTO_CTL=${arr[$i]}
 STR1="VALVE_AUTO_CTL: ${arr[$i]}"
 STR2="VALVE_AUTO_CTL: $DB_VALVE_AUTO_CTL"
@@ -1393,8 +1599,10 @@ fi
 
 # 31 KFAKTOR    //K_FACTOR
 # Получения значения из БД
-#DB_KFAKTOR=$(psql -U $Login -d $Name -p $Port -tA -c "select value from info_params.device_info_params
+#export PGPASSWORD=$Password
+#DB_KFAKTOR=$(psql -U $Login -h $Host -p $Port -d $Name -tA -c "select value from info_params.device_info_params
 #where device_id=$id and attribute_id=2671;")
+# unset PGPASSWORD
 KFAKTOR=${arr[$i]}
 STR1="KFAKTOR: ${arr[$i]}"
 STR2="KFAKTOR: $DB_KFAKTOR"
@@ -1421,8 +1629,10 @@ fi
 
 # 32 LASTTELARCNUM  //ARC_TELEMETRY_LASTREC
 # Получения значения из БД
-DB_LASTTELARCNUM=$(psql -U $Login -d $Name -p $Port -tA -c "select value from info_params.device_info_params
+export PGPASSWORD=$Password
+DB_LASTTELARCNUM=$(psql -U $Login -h $Host -p $Port -d $Name -tA -c "select value from info_params.device_info_params
 where device_id=$id and attribute_id=85;")
+unset PGPASSWORD
 LASTTELARCNUM=${arr[$i]}
 STR1="LASTTELARCNUM: ${arr[$i]}"
 STR2="LASTTELARCNUM: $DB_LASTTELARCNUM"
@@ -1449,8 +1659,10 @@ fi
 
 # 33 BATTERY_PERCENT    //BAT_TELEMETRY
 # Получения значения из БД
-DB_BATTERY_PERCENT=$(psql -U $Login -d $Name -p $Port -tA -c "select value from info_params.device_info_params
+export PGPASSWORD=$Password
+DB_BATTERY_PERCENT=$(psql -U $Login -h $Host -p $Port -d $Name -tA -c "select value from info_params.device_info_params
 where device_id=$id and attribute_id=35;")
+unset PGPASSWORD
 BATTERY_PERCENT=${arr[$i]}
 STR1="BATTERY_PERCENT: ${arr[$i]}"
 STR2="BATTERY_PERCENT: $DB_BATTERY_PERCENT"
@@ -1477,13 +1689,17 @@ fi
 
 # 34 TCP_ADDRESS2   //SERVER_URL2 (char57) - для конкретной SIM карты. Cм.описание
 if [ -z "$SIM_ACTIV" ]; then
-DB_TCP_ADDRESS2=$(psql -U $Login -d $Name -p $Port -tA -c "select value from info_params.device_info_params
-where device_id=$id and attribute_id=56;")
+    export PGPASSWORD=$Password
+    DB_TCP_ADDRESS2=$(psql -U $Login -h $Host -p $Port -d $Name -tA -c "select value from info_params.device_info_params
+    where device_id=$id and attribute_id=56;")
+    unset PGPASSWORD
 else
-DB_TCP_ADDRESS2=$(psql -U $Login -d $Name -p $Port -tA -c "select value from info_params.sim_info_params as si
-join dicts.attributes_dict as ad on ad.id=si.attribute_id
-join devices_custs.device_sim as ds on ds.id=si.sim_id
-where ds.device_id=$id and attribute_id=56 and sim_num=$SIM_ACTIV;")
+    export PGPASSWORD=$Password
+    DB_TCP_ADDRESS2=$(psql -U $Login -h $Host -p $Port -d $Name -tA -c "select value from info_params.sim_info_params as si
+    join dicts.attributes_dict as ad on ad.id=si.attribute_id
+    join devices_custs.device_sim as ds on ds.id=si.sim_id
+    where ds.device_id=$id and attribute_id=56 and sim_num=$SIM_ACTIV;")
+    unset PGPASSWORD
 fi
 TCP_ADDRESS2=${arr[$i]}
 STR1="TCP_ADDRESS2: ${arr[$i]}"
@@ -1512,10 +1728,12 @@ fi
 # 35 AUTO_OFF_REZREP    //AUTO_OFF_REZREP (uint8) - использование резервных и повторных сеансов для конкретной SIM карты. Cм.описание.
 if [ -n "$VERS_K" ]; then
     if (( $(echo "$VERS_K >= 1.050299" | bc -l) )); then
-        DB_AUTO_OFF_REZREP=$(psql -U $Login -d $Name -p $Port -tA -c "select value from info_params.sim_info_params as si
+        export PGPASSWORD=$Password
+        DB_AUTO_OFF_REZREP=$(psql -U $Login -h $Host -p $Port -d $Name -tA -c "select value from info_params.sim_info_params as si
         join dicts.attributes_dict as ad on ad.id=si.attribute_id
         join devices_custs.device_sim as ds on ds.id=si.sim_id
         where ds.device_id=$id and attribute_id=2672 and sim_num=$SIM_ACTIV;")
+        unset PGPASSWORD
         AUTO_OFF_REZREP=${arr[$i]}
         STR1="AUTO_OFF_REZREP: ${arr[$i]}"
         STR2="AUTO_OFF_REZREP: $DB_AUTO_OFF_REZREP"
@@ -1551,10 +1769,12 @@ if [ -n "$VERS_K" ]; then
     fi
 else
     if (( $(echo "$VERS_S >= 1.290299" | bc -l) )); then
-        DB_AUTO_OFF_REZREP=$(psql -U $Login -d $Name -p $Port -tA -c "select value from info_params.sim_info_params as si
+        export PGPASSWORD=$Password
+        DB_AUTO_OFF_REZREP=$(psql -U $Login -h $Host -p $Port -d $Name -tA -c "select value from info_params.sim_info_params as si
         join dicts.attributes_dict as ad on ad.id=si.attribute_id
         join devices_custs.device_sim as ds on ds.id=si.sim_id
         where ds.device_id=$id and attribute_id=2672 and sim_num=$SIM_ACTIV;")
+        unset PGPASSWORD
         AUTO_OFF_REZREP=${arr[$i]}
         STR1="AUTO_OFF_REZREP: ${arr[$i]}"
         STR2="AUTO_OFF_REZREP: $DB_AUTO_OFF_REZREP"
@@ -1592,8 +1812,10 @@ fi
 
 # 36 SERIAL_BOARD   //SERIAL_NUMBER_BOARD (char14) - серийный номер платы. . Cм.описание NUMBER_BOARD2.
 # Получения значения из БД
-DB_SERIAL_BOARD=$(psql -U $Login -d $Name -p $Port -tA -c "select value from info_params.device_info_params
+export PGPASSWORD=$Password
+DB_SERIAL_BOARD=$(psql -U $Login -h $Host -p $Port -d $Name -tA -c "select value from info_params.device_info_params
 where device_id=$id and attribute_id=2673;")
+unset PGPASSWORD
 SERIAL_BOARD=${arr[$i]}
 STR1="SERIAL_BOARD: ${arr[$i]}"
 STR2="SERIAL_BOARD: $DB_SERIAL_BOARD"
@@ -1620,8 +1842,10 @@ fi
 
 # 37 SGS_PHONE2 //SMS_PHONE2 (char14) - резерв
 # Получения значения из БД
-#DB_SGS_PHONE2=$(psql -U $Login -d $Name -p $Port -tA -c "select value from info_params.device_info_params
+# export PGPASSWORD=$Password
+#DB_SGS_PHONE2=$(psql -U $Login -h $Host -p $Port -d $Name -tA -c "select value from info_params.device_info_params
 #where device_id=$id and attribute_id=2673;")
+# unset PGPASSWORD
 SGS_PHONE2=${arr[$i]}
 STR1="SGS_PHONE2: ${arr[$i]}"
 STR2="SGS_PHONE2: $DB_SGS_PHONE2"
@@ -1648,8 +1872,10 @@ fi
 
 # 38 WARNINGSTATE   //STATUS_WARNING (uint32) - текущий статус предупреждений.
 # Получения значения из БД
-DB_WARNINGSTATE=$(psql -U $Login -d $Name -p $Port -tA -c "select value from info_params.device_info_params
+export PGPASSWORD=$Password
+DB_WARNINGSTATE=$(psql -U $Login -h $Host -p $Port -d $Name -tA -c "select value from info_params.device_info_params
 where device_id=$id and attribute_id=75;")
+unset PGPASSWORD
 #преобразуем значение из файла из hex16 в hex10
 WARNINGSTATE=$(printf "%d" 0x"${arr[$i]}")
 STR1="WARNINGSTATE: $WARNINGSTATE"
@@ -1677,8 +1903,10 @@ fi
 
 # 39 ALARMSTATE     //STATUS_ALARM (uint32) - текущий статус тревог.
 # Получения значения из БД
-DB_ALARMSTATE=$(psql -U $Login -d $Name -p $Port -tA -c "select value from info_params.device_info_params
+export PGPASSWORD=$Password
+DB_ALARMSTATE=$(psql -U $Login -h $Host -p $Port -d $Name -tA -c "select value from info_params.device_info_params
 where device_id=$id and attribute_id=74;")
+unset PGPASSWORD
 #преобразуем значение из файла из hex16 в hex10
 ALARMSTATE=$(printf "%d" 0x"${arr[$i]}")
 STR1="ALARMSTATE: $ALARMSTATE"
@@ -1706,8 +1934,10 @@ fi
 
 # 40 CRASHSTATE     //STATUS_CRASH (uint32) - текущий статус аварий.
 # Получения значения из БД
-DB_CRASHSTATE=$(psql -U $Login -d $Name -p $Port -tA -c "select value from info_params.device_info_params
+export PGPASSWORD=$Password
+DB_CRASHSTATE=$(psql -U $Login -h $Host -p $Port -d $Name -tA -c "select value from info_params.device_info_params
 where device_id=$id and attribute_id=73;")
+unset PGPASSWORD
 #преобразуем значение из файла из hex16 в hex10
 CRASHSTATE=$(printf "%d" 0x"${arr[$i]}")
 STR1="CRASHSTATE: $CRASHSTATE"
@@ -1735,8 +1965,10 @@ fi
 
 # 41 STATUS_STORY    STATUS_STORY (uint64) - текущее состояние регистров ПТА. 0-15 биты П, 16-31 биты Т, 32-47 биты- А.
 # Получения значения из БД
-DB_STATUS_STORY=$(psql -U $Login -d $Name -p $Port -tA -c "select value from info_params.device_info_params
+export PGPASSWORD=$Password
+DB_STATUS_STORY=$(psql -U $Login -h $Host -p $Port -d $Name -tA -c "select value from info_params.device_info_params
 where device_id=$id and attribute_id=110;")
+unset PGPASSWORD
 #преобразуем значение из файла из hex16 в hex10
 CRASHSTATE=$(printf "%d" 0x"${arr[$i]}")
 STR1="STATUS_STORY: $CRASHSTATE"
@@ -1762,9 +1994,11 @@ else
     fi
 fi
 
-# 42 ERROR_SESSION_SERVER2     ERROR_SESSION_SERVER_2 (uint32) - счётчик неудачных сеансов на серев1 для конкретной SIM карты (не обнуляется).
-DB_ERROR_SESSION_SERVER2=$(psql -U $Login -d $Name -p $Port -tA -c "select value from info_params.device_info_params
+# 42 ERROR_SESSION_SERVER2     ERROR_SESSION_SERVER_2 (uint32) - счётчик неудачных сеансов на серев1 для конкретной SIM карты (не обнуляется)
+export PGPASSWORD=$Password
+DB_ERROR_SESSION_SERVER2=$(psql -U $Login -h $Host -p $Port -d $Name -tA -c "select value from info_params.device_info_params
 where device_id=$id and attribute_id=2675;")
+unset PGPASSWORD
 ERROR_SESSION_SERVER2=${arr[$i]}
 STR1="ERROR_SESSION_SERVER2: ${arr[$i]}"
 STR2="ERROR_SESSION_SERVER2: $DB_ERROR_SESSION_SERVER2"
@@ -1792,8 +2026,10 @@ fi
 # 43 CNT_REZREP     //CNT_REZREP (uint32) - число всего совершённых сеансов повторных и резервных.
 if [ -n "$VERS_K" ]; then
     if (( $(echo "$VERS_K >= 1.050299" | bc -l) )); then
-        DB_CNT_REZREP=$(psql -U $Login -d $Name -p $Port -tA -c "select value from info_params.device_info_params
+        export PGPASSWORD=$Password
+        DB_CNT_REZREP=$(psql -U $Login -h $Host -p $Port -d $Name -tA -c "select value from info_params.device_info_params
         where device_id=$id and attribute_id=2676;")
+        unset PGPASSWORD
         CNT_REZREP=${arr[$i]}
         STR1="CNT_REZREP: ${arr[$i]}"
         STR2="CNT_REZREP: $DB_CNT_REZREP"
@@ -1829,8 +2065,10 @@ if [ -n "$VERS_K" ]; then
     fi
 else
     if (( $(echo "$VERS_S >= 1.290299" | bc -l) )); then
-        DB_CNT_REZREP=$(psql -U $Login -d $Name -p $Port -tA -c "select value from info_params.device_info_params
+        export PGPASSWORD=$Password
+        DB_CNT_REZREP=$(psql -U $Login -h $Host -p $Port -d $Name -tA -c "select value from info_params.device_info_params
         where device_id=$id and attribute_id=2676;")
+        unset PGPASSWORD
         CNT_REZREP=${arr[$i]}
         STR1="CNT_REZREP: ${arr[$i]}"
         STR2="CNT_REZREP: $DB_CNT_REZREP"
@@ -1867,8 +2105,10 @@ else
 fi
 
 # 44 BATTERY_TELEMETRY  //BAT_COUNTER (float) - остаточная ёмкость батареи счётчика (резервная) в %.
-DB_BATTERY_TELEMETRY=$(psql -U $Login -d $Name -p $Port -tA -c "select value from info_params.device_info_params
+export PGPASSWORD=$Password
+DB_BATTERY_TELEMETRY=$(psql -U $Login -h $Host -p $Port -d $Name -tA -c "select value from info_params.device_info_params
 where device_id=$id and attribute_id=3022;")
+unset PGPASSWORD
 BATTERY_TELEMETRY=${arr[$i]}
 STR1="BATTERY_TELEMETRY: ${arr[$i]}"
 STR2="BATTERY_TELEMETRY: $DB_BATTERY_TELEMETRY"
@@ -1894,8 +2134,10 @@ else
 fi
 
 # 45 CURRENT_FLOW   //CURRENT_FLOW (uint64) - м3*10000  -текущий расход газа.
-DB_CURRENT_FLOW=$(psql -U $Login -d $Name -p $Port -tA -c "select value from info_params.device_info_params
+export PGPASSWORD=$Password
+DB_CURRENT_FLOW=$(psql -U $Login -h $Host -p $Port -d $Name -tA -c "select value from info_params.device_info_params
 where device_id=$id and attribute_id=2677;")
+unset PGPASSWORD
 CURRENT_FLOW=${arr[$i]}
 STR1="CURRENT_FLOW: ${arr[$i]}"
 STR2="CURRENT_FLOW: $DB_CURRENT_FLOW"
@@ -1921,8 +2163,10 @@ else
 fi
 
 # 46 CURRENT_FLOW_DISPL     //CURRENT_FLOW_DISPL (uint64) - м3*10000 - текущий возмущённый расход газа
-DB_CURRENT_FLOW_DISPL=$(psql -U $Login -d $Name -p $Port -tA -c "select value from info_params.device_info_params
+export PGPASSWORD=$Password
+DB_CURRENT_FLOW_DISPL=$(psql -U $Login -h $Host -p $Port -d $Name -tA -c "select value from info_params.device_info_params
 where device_id=$id and attribute_id=2678;")
+unset PGPASSWORD
 CURRENT_FLOW_DISPL=${arr[$i]}
 STR1="CURRENT_FLOW_DISPL: ${arr[$i]}"
 STR2="CURRENT_FLOW_DISPL: $DB_CURRENT_FLOW_DISPL"
@@ -1949,8 +2193,10 @@ fi
 
 # 47 LASTVSDIST     //CURRENT_COUNTER_DISC (uint64) - м3*10000 - накопленный возмущённый объём.
 # Значение надо посчтиать по формуле CURRENT_COUNTER_DISC*VOLUME_PULSE
-#DB_LASTVSDIST=$(psql -U $Login -d $Name -p $Port -tA -c "select value from info_params.device_info_params
+# export PGPASSWORD=$Password
+#DB_LASTVSDIST=$(psql -U $Login -h $Host -p $Port -d $Name -tA -c "select value from info_params.device_info_params
 #where device_id=$id and attribute_id=2678;")
+# unset PGPASSWORD
 LASTVSDIST=${arr[$i]}
 STR1="LASTVSDIST: ${arr[$i]}"
 STR2="LASTVSDIST: $DB_LASTVSDIST"
@@ -1976,8 +2222,10 @@ else
 fi
 
 # 48 CURRENT_COUNTER_GLOB   //CURRENT_COUNTER_GLOB (uint64) - м3*10000, равен CURRENT_COUNTER
-DB_CURRENT_COUNTER_GLOB=$(psql -U $Login -d $Name -p $Port -tA -c "select value from info_params.device_info_params
+export PGPASSWORD=$Password
+DB_CURRENT_COUNTER_GLOB=$(psql -U $Login -h $Host -p $Port -d $Name -tA -c "select value from info_params.device_info_params
 where device_id=$id and attribute_id=37;")
+unset PGPASSWORD
 CURRENT_COUNTER_GLOB=$(echo ${arr[$i]} | grep -oE '[0-9]*\.?[0-9]+')
 CURRENT_COUNTER_GLOB=$(echo "scale=4; $CURRENT_COUNTER_GLOB * $VOLUME_PULSE" | bc)
 # Добавляем "0" если значение меньше единицы
@@ -2008,8 +2256,10 @@ else
 fi
 
 # 49 STATUS_RS485   //STATUS_RS485 (uint8) - 0 бит - '1' - есть питание внешнее, 1 бит - '1' - есть питание интерфейса, 2 бит - '1' - есть активность интерфейса.
-DB_STATUS_RS485=$(psql -U $Login -d $Name -p $Port -tA -c "select value from info_params.device_info_params
+export PGPASSWORD=$Password
+DB_STATUS_RS485=$(psql -U $Login -h $Host -p $Port -d $Name -tA -c "select value from info_params.device_info_params
 where device_id=$id and attribute_id=2679;")
+unset PGPASSWORD
 STATUS_RS485=${arr[$i]}
 STR1="STATUS_RS485: ${arr[$i]}"
 STR2="STATUS_RS485: $DB_STATUS_RS485"
@@ -2035,8 +2285,10 @@ else
 fi
 
 # 50 SIM_ENABLE     //SIM_ENABLE (uint8), hex - какие сим карты включены: 0 бит 1 SIM, 1 бит 2 SIM, 2 бит 3 SIM.
-DB_SIM_ENABLE=$(psql -U $Login -d $Name -p $Port -tA -c "select value from info_params.device_info_params
+export PGPASSWORD=$Password
+DB_SIM_ENABLE=$(psql -U $Login -h $Host -p $Port -d $Name -tA -c "select value from info_params.device_info_params
 where device_id=$id and attribute_id=2686;")
+unset PGPASSWORD
 SIM_ENABLE=${arr[$i]}
 STR1="SIM_ENABLE: ${arr[$i]}"
 STR2="SIM_ENABLE: $DB_SIM_ENABLE"
@@ -2062,8 +2314,10 @@ else
 fi
 
 # 51 SIM_ACTIV  //SIM_ACTIV (uint8) - (1-3) какая SIM сейчас активна при включённом модем или была активной последней после выключения модема.
-DB_SIM_ACTIV=$(psql -U $Login -d $Name -p $Port -tA -c "select value from info_params.device_info_params
+export PGPASSWORD=$Password
+DB_SIM_ACTIV=$(psql -U $Login -h $Host -p $Port -d $Name -tA -c "select value from info_params.device_info_params
 where device_id=$id and attribute_id=2680;")
+unset PGPASSWORD
 SIM_ACTIV=${arr[$i]}
 STR1="SIM_ACTIV: ${arr[$i]}"
 STR2="SIM_ACTIV: $DB_SIM_ACTIV"
@@ -2089,8 +2343,10 @@ else
 fi
 
 # 52 MODEM_IMEI     //IMEI модема
-DB_MODEM_IMEI=$(psql -U $Login -d $Name -p $Port -tA -c "select value from info_params.device_info_params
+export PGPASSWORD=$Password
+DB_MODEM_IMEI=$(psql -U $Login -h $Host -p $Port -d $Name -tA -c "select value from info_params.device_info_params
 where device_id=$id and attribute_id=51;")
+unset PGPASSWORD
 MODEM_IMEI=${arr[$i]}
 STR1="MODEM_IMEI: ${arr[$i]}"
 STR2="MODEM_IMEI: $DB_MODEM_IMEI"
@@ -2116,8 +2372,10 @@ else
 fi
 
 # 53 EN_ARCHIVE_SIM3    //EN_ARCHIVE_SIM3 (uint8) - разрешение ведение арх.телем для SIM3
-DB_EN_ARCHIVE_SIM3=$(psql -U $Login -d $Name -p $Port -tA -c "select value from info_params.device_info_params
+export PGPASSWORD=$Password
+DB_EN_ARCHIVE_SIM3=$(psql -U $Login -h $Host -p $Port -d $Name -tA -c "select value from info_params.device_info_params
 where device_id=$id and attribute_id=2681;")
+unset PGPASSWORD
 EN_ARCHIVE_SIM3=${arr[$i]}
 STR1="EN_ARCHIVE_SIM3: ${arr[$i]}"
 STR2="EN_ARCHIVE_SIM3: $DB_EN_ARCHIVE_SIM3"
@@ -2143,8 +2401,10 @@ else
 fi
 
 # 54 TEMP_BOARD     //TEMP_BOARD (float) - температура платы
-DB_TEMP_BOARD=$(psql -U $Login -d $Name -p $Port -tA -c "select value from info_params.device_info_params
+export PGPASSWORD=$Password
+DB_TEMP_BOARD=$(psql -U $Login -h $Host -p $Port -d $Name -tA -c "select value from info_params.device_info_params
 where device_id=$id and attribute_id=2682;")
+unset PGPASSWORD
 TEMP_BOARD=${arr[$i]}
 STR1="TEMP_BOARD: ${arr[$i]}"
 STR2="TEMP_BOARD: $DB_TEMP_BOARD"
@@ -2170,8 +2430,10 @@ else
 fi
 
 # 55 EXT_ANT    //EXT_ANT (uint8) - переключатель антенны в универсальной плате
-DB_EXT_ANT=$(psql -U $Login -d $Name -p $Port -tA -c "select value from info_params.device_info_params
+export PGPASSWORD=$Password
+DB_EXT_ANT=$(psql -U $Login -h $Host -p $Port -d $Name -tA -c "select value from info_params.device_info_params
 where device_id=$id and attribute_id=2683;")
+unset PGPASSWORD
 EXT_ANT=${arr[$i]}
 STR1="EXT_ANT: ${arr[$i]}"
 STR2="EXT_ANT: $DB_EXT_ANT"
@@ -2197,8 +2459,10 @@ else
 fi
 
 # 56 GAS_MON    //газовый месяц
-#DB_GAS_MON=$(psql -U $Login -d $Name -p $Port -tA -c "select value from info_params.device_info_params
+# export PGPASSWORD=$Password
+#DB_GAS_MON=$(psql -U $Login -h $Host -p $Port -d $Name -tA -c "select value from info_params.device_info_params
 #where device_id=$id and attribute_id=2683;")
+# unset PGPASSWORD
 GAS_MON=${arr[$i]}
 STR1="GAS_MON: ${arr[$i]}"
 STR2="GAS_MON: $DB_GAS_MON"
@@ -2224,8 +2488,10 @@ else
 fi
 
 # 57 LASTMONARCNUM  //последний номер арх. месячного
-#DB_LASTMONARCNUM=$(psql -U $Login -d $Name -p $Port -tA -c "select value from info_params.device_info_params
+# export PGPASSWORD=$Password
+#DB_LASTMONARCNUM=$(psql -U $Login -h $Host -p $Port -d $Name -tA -c "select value from info_params.device_info_params
 #where device_id=$id and attribute_id=2683;")
+# unset PGPASSWORD
 LASTMONARCNUM=${arr[$i]}
 STR1="LASTMONARCNUM: ${arr[$i]}"
 STR2="LASTMONARCNUM: $DB_LASTMONARCNUM"
