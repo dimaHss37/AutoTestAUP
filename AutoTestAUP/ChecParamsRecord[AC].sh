@@ -46,24 +46,55 @@ fi
 IN_DIR=$(find /opt -type d -name "In" 2>/dev/null | grep Arc/In)
 
 ACTIVE_DIR=$(dirname "$0")
-LIST=$(ls $ACTIVE_DIR/rdt | column -t)
-ls $ACTIVE_DIR/rdt | column -t > $ACTIVE_DIR/.list.tmp
 
-if [ -z "$LIST" ]; then
-     echo "Нет файлов для тестов"
-     # Запускаем подменю программы
-     exit 0
-else
-    clear
+# МЕНЮ ВЫБОРА ФАЙЛА
+# принудительное создание папки rdt
+mkdir $ACTIVE_DIR/rdt 2>/dev/null
+# удаление файлов с расширениен не "rdt" в папке rdt
+find $ACTIVE_DIR/rdt -type f ! -iname "*.rdt" -delete
+
+files=$(find $ACTIVE_DIR/rdt -type f | wc -l )
+if [[ $files == 0 ]]; then
     echo ""
-    ls $ACTIVE_DIR/rdt | column -t | nl
-    echo ""
-    read -p "Выберите файл для обработки: " NUM_FILE
-    NUM_FILE="NR==$NUM_FILE"
-    NAME_FILE=$(cat $ACTIVE_DIR/.list.tmp | awk $NUM_FILE)
-    rm $ACTIVE_DIR/.list.tmp 2>/dev/null
-    clear
+    echo "Файлов rdt в папке $ACTIVE_DIR/rdt не найдено."
+    exit 0
 fi
+ls $ACTIVE_DIR/rdt | column -t > $ACTIVE_DIR/.files_list.tmp
+
+for ((i=1; i<=$files; i++)); do
+    ind="NR==$i"
+    name=$(ls $ACTIVE_DIR/rdt | column -t | awk $ind)
+    vers=$(cat $ACTIVE_DIR/rdt/$name | grep vers -i | grep -oE '[0-9]*\.?[0-9]+')
+    prot=$(cat $ACTIVE_DIR/rdt/$name | grep "VER_PROTOCOL=")
+    if [ -z $prot ]; then
+    prot="VER_PROTOCOL=0"
+    fi
+    Application=$(cat $ACTIVE_DIR/rdt/$name | head -n 1)
+    if echo "$Application" | grep -wq "Application"; then
+        vers=$(cat $ACTIVE_DIR/rdt/$name | grep "ApplVersion" | grep -oE '[0-9]*\.[0-9]*\.[0-9]*')
+        prot="Не_поддерживается"
+    fi
+    echo -e "$name $vers $prot" >> $ACTIVE_DIR/.list1.tmp
+done
+cat $ACTIVE_DIR/.list1.tmp | column -t >> $ACTIVE_DIR/.list2.tmp
+list=$(cat $ACTIVE_DIR/.list2.tmp | nl -s ' ==> ')
+clear
+echo ""
+for ((i=1; i<=$files; i++)); do
+    ind="NR==$i"
+    echo "$list" | awk $ind
+    sleep 0.015
+done
+
+ echo ""
+ read -p "Укажите номер файла для обработки: " NUM_FILE
+ NUM_FILE="NR==$NUM_FILE"
+ NAME_FILE=$(cat $ACTIVE_DIR/.files_list.tmp | awk $NUM_FILE)
+ rm $ACTIVE_DIR/.files_list.tmp 2>/dev/null
+ rm $ACTIVE_DIR/.list1.tmp 2>/dev/null
+ rm $ACTIVE_DIR/.list2.tmp 2>/dev/null
+ clear
+# КОНЕЦ МЕНЮ ВЫБОРА ФАЙЛА
 
 # Путь к обрабатываемому файлу
 TARGET="$ACTIVE_DIR/rdt/$NAME_FILE"
@@ -101,7 +132,7 @@ MODULE_NAME="ChecParamsRecordAC"
 # получаем текущую дату
 DATE_STR=$(date +"%d_%m_%Y")
 # формируем имя и путь лог файла
-F_LOG="/Log/$MODULE_NAME$_DATE_STR.log"
+F_LOG="/Log/ChecParamsRecordAC_$DATE_STR.log"
 LOG="$ACTIVE_DIR$F_LOG"
 
 
@@ -252,7 +283,7 @@ where device_id=$id and attribute_id=48;")
 #unset PGPASSWORD
 STR1="SIMIP: $SIMIP"
 STR2="SIMIP: $DB_SIMIP"
-#SIMIP_LOG=$(cat $TARGET | grep simip -i | awk -F'=' '{print $2}' | sed -i '$s/\n//')
+SIMIP_LOG=$(cat $TARGET | grep simip -i | grep -oE '[0-9]*\.[0-9]*\.[0-9]*\.[0-9]*')
 sleep 0.1
 if echo "$SIMIP" | grep -wq "$DB_SIMIP"; then
     echo -e "${GREEN}FILE ==>    $STR1${NC}"
@@ -338,7 +369,7 @@ DB_VOLUME_PULSE=$(psql -U $Login -d $Name -p $Port -tA -c "select value from inf
 where device_id=$id and attribute_id=103;")
 STR1=$(echo "scale=4; 1 / ${arr[$i]}" | bc)
 VOLUME_PULSE=0$STR1
-if [ $(echo "$DB_VOLUME_PULSE == 0.001 && $VOLUME_PULSE == 0.0010" | bc) -eq 1 ]; then
+if [[ $(echo "$DB_VOLUME_PULSE == 0.001 && $VOLUME_PULSE == 0.0010" | bc) -eq 1 ]]; then
     DB_VOLUME_PULSE=0.0010
 fi
 STR1="VOLUME_PULSE: $VOLUME_PULSE"
@@ -554,6 +585,10 @@ if echo "$STR1" | grep -wq "$STR2"; then
     echo -e "${GREEN}FILE ==>    $STR1${NC}"
     echo -e "${GREEN}DB   ==>    $STR2${NC}"
     echo "---------------------------"
+    # запись в log
+    DATE_STR=$(date +"%d.%m.%Y")
+    TIME_STR=$(date +"%H:%M:%S")
+    echo "[$DATE_STR][$TIME_STR][$MODULE_NAME][OK][Параметр №7 APN_PASSWORD: FILE-$APN_PASSWORD DB-$DB_APN_PASSWORD параметры совпали]" >> $LOG
     ((i++))
     if [ "$i" -ge "$COUNTERS" ]; then
         # Запускаем подменю программы
@@ -563,6 +598,10 @@ else
     echo -e "${RED}FILE ==>    $STR1${NC}"
     echo -e "${RED}DB   ==>    $STR2${NC}"
     echo "---------------------------"
+    # запись в log
+    DATE_STR=$(date +"%d.%m.%Y")
+    TIME_STR=$(date +"%H:%M:%S")
+    echo "[$DATE_STR][$TIME_STR][$MODULE_NAME][ERR][Параметр №7 APN_PASSWORD: FILE-$APN_PASSWORD DB-$DB_APN_PASSWORD параметры не совпали]" >> $LOG
     ((i++))
     if [ "$i" -ge "$COUNTERS" ]; then
         # Запускаем подменю программы
@@ -589,6 +628,10 @@ if echo "$STR1" | grep -wq "$STR2"; then
     echo -e "${GREEN}FILE ==>    $STR1${NC}"
     echo -e "${GREEN}DB   ==>    $STR2${NC}"
     echo "---------------------------"
+    # запись в log
+    DATE_STR=$(date +"%d.%m.%Y")
+    TIME_STR=$(date +"%H:%M:%S")
+    echo "[$DATE_STR][$TIME_STR][$MODULE_NAME][OK][Параметр №8 APN_PASSWORD: FILE-$TCP_ADDRESS DB-$DB_TCP_ADDRESS параметры совпали]" >> $LOG
     ((i++))
     if [ "$i" -ge "$COUNTERS" ]; then
         # Запускаем подменю программы
@@ -598,6 +641,10 @@ else
     echo -e "${RED}FILE ==>    $STR1${NC}"
     echo -e "${RED}DB   ==>    $STR2${NC}"
     echo "---------------------------"
+    # запись в log
+    DATE_STR=$(date +"%d.%m.%Y")
+    TIME_STR=$(date +"%H:%M:%S")
+    echo "[$DATE_STR][$TIME_STR][$MODULE_NAME][ERR][Параметр №8 APN_PASSWORD: FILE-$TCP_ADDRESS DB-$DB_TCP_ADDRESS параметры не совпали]" >> $LOG
     ((i++))
     if [ "$i" -ge "$COUNTERS" ]; then
         # Запускаем подменю программы
@@ -619,6 +666,10 @@ if echo "$STR1" | grep -wq "$STR2"; then
     echo -e "${GREEN}FILE ==>    $STR1${NC}"
     echo -e "${GREEN}DB   ==>    $STR2${NC}"
     echo "---------------------------"
+    # запись в log
+    DATE_STR=$(date +"%d.%m.%Y")
+    TIME_STR=$(date +"%H:%M:%S")
+    echo "[$DATE_STR][$TIME_STR][$MODULE_NAME][OK][Параметр №9 APN_PASSWORD: FILE-$SMS_PHONE DB-$DB_SMS_PHONE параметры совпали]" >> $LOG
     ((i++))
     if [ "$i" -ge "$COUNTERS" ]; then
         # Запускаем подменю программы
@@ -628,6 +679,10 @@ else
     echo -e "${RED}FILE ==>    $STR1${NC}"
     echo -e "${RED}DB   ==>    $STR2${NC}"
     echo "---------------------------"
+    # запись в log
+    DATE_STR=$(date +"%d.%m.%Y")
+    TIME_STR=$(date +"%H:%M:%S")
+    echo "[$DATE_STR][$TIME_STR][$MODULE_NAME][ERR][Параметр №9 APN_PASSWORD: FILE-$SMS_PHONE DB-$DB_SMS_PHONE параметры не совпали]" >> $LOG
     ((i++))
     if [ "$i" -ge "$COUNTERS" ]; then
         # Запускаем подменю программы
@@ -1893,6 +1948,7 @@ else
 fi
 
 # 47 LASTVSDIST     //CURRENT_COUNTER_DISC (uint64) - м3*10000 - накопленный возмущённый объём.
+# Значение надо посчтиать по формуле CURRENT_COUNTER_DISC*VOLUME_PULSE
 #DB_LASTVSDIST=$(psql -U $Login -d $Name -p $Port -tA -c "select value from info_params.device_info_params
 #where device_id=$id and attribute_id=2678;")
 LASTVSDIST=${arr[$i]}
