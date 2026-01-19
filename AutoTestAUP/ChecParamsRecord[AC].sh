@@ -118,10 +118,9 @@ TARGET="$ACTIVE_DIR/rdt/$NAME_FILE"
 
 Readout_TYPE=$(cat $TARGET | grep "Readout\|Application")
 if [ -n "$Readout_TYPE" ]; then
-    echo -e "${RED}Файлы из readout не обрабатываются, нет реализации на текущий момент.${NC}"
+    echo -e "\t${RED}Файлы из readout не обрабатываются, нет реализации на текущий момент.${NC}"
     echo ""
-    # Запускаем подменю программы
-    exit 0
+    $ACTIVE_DIR/MenuAC.sh
 fi
 
 devnum=$(echo "$NAME_FILE" | sed 's/.*_//' | cut -d'.' -f1)
@@ -133,15 +132,14 @@ export PGPASSWORD=$Password
 id=$(psql -U $Login -h $Host -p $Port -d $Name -tA -c "select id from devices_custs.device
 where devnum='$devnum';")
 unset PGPASSWORD
+# ПРОВЕРКА И ПРЕДЛОЖЕНИЕ ОБРАБОТАТЬ ФАЙЛ,
 if [ -z "$id" ]; then
-    echo -e "${RED}Прибора $devnum нет в базе данных $Name.${NC}"
+    echo -e "\t${RED}Прибора $devnum нет в базе данных $Name.${NC}"
     echo ""
-    # Запускаем подменю программы
     exit 0
 fi
 
 # ПРЕДЛОЖЕНИЕ ПЕРЕЗАПИСАТЬ ФАЙЛ В БД
-
 ACTUAL_COUNTERS=$(tac $TARGET | grep -m 1 "ACTUAL COUNTERS" -a1 | head -n 1)
 IFS=';' read -r -a arr1 <<< "$ACTUAL_COUNTERS" # Преобразует строку в массив 'arr'
 export PGPASSWORD=$Password
@@ -171,7 +169,6 @@ if [[ "$DATETIME" != "$DB_DATETIME" ]]; then
         fi
         sleep 3
         clear
-
         ;;
         2)
         $ACTIVE_DIR/Menu_v0.1.sh
@@ -189,7 +186,6 @@ if [[ "$DATETIME" != "$DB_DATETIME" ]]; then
         ;;
     esac
 fi
-
 # КОНЕЦ ПРЕДЛОЖЕНИЯ ПЕРЕЗАПИСАТЬ ФАЙЛ В БД
 
 
@@ -283,7 +279,7 @@ if [ "$STR1" != "$STR2" ]; then
     # запись в log
     DATE_STR=$(date +"%d.%m.%Y")
     TIME_STR=$(date +"%H:%M:%S")
-    echo "[$DATE_STR][$TIME_STR][$MODULE_NAME][ERR][TYPE: FILE-$TYPE DB-$DB_TYPE параметры не совпали]" >> $LOG
+    echo "[$DATE_STR][$TIME_STR][$MODULE_NAME][Failed][TYPE: FILE-$TYPE DB-$DB_TYPE параметры не совпали]" >> $LOG
 else
     echo -e "${GREEN}FILE ==>    $STR1${NC}"
     echo -e "${GREEN}DB   ==>    $STR2${NC}"
@@ -291,7 +287,7 @@ else
     # запись в log
     DATE_STR=$(date +"%d.%m.%Y")
     TIME_STR=$(date +"%H:%M:%S")
-    echo "[$DATE_STR][$TIME_STR][$MODULE_NAME][OK][TYPE: FILE-$TYPE DB-$DB_TYPE параметры совпали]" >> $LOG
+    echo "[$DATE_STR][$TIME_STR][$MODULE_NAME][Passed][TYPE: FILE-$TYPE DB-$DB_TYPE параметры совпали]" >> $LOG
 fi
 # SN
 SN=$(cat $TARGET | grep sn -i | grep -o '[0-9]\+')
@@ -311,7 +307,7 @@ if echo "$SN" | grep -wq "$DB_SN"; then
     # запись в log
     DATE_STR=$(date +"%d.%m.%Y")
     TIME_STR=$(date +"%H:%M:%S")
-    echo "[$DATE_STR][$TIME_STR][$MODULE_NAME][OK][SN: FILE-$SN DB-$DB_SN параметры совпали]" >> $LOG
+    echo "[$DATE_STR][$TIME_STR][$MODULE_NAME][Passed][SN: FILE-$SN DB-$DB_SN параметры совпали]" >> $LOG
 else
     echo -e "${RED}FILE ==>    $STR1${NC}"
     echo -e "${RED}DB   ==>    $STR2${NC}"
@@ -319,7 +315,7 @@ else
     # запись в log
     DATE_STR=$(date +"%d.%m.%Y")
     TIME_STR=$(date +"%H:%M:%S")
-    echo "[$DATE_STR][$TIME_STR][$MODULE_NAME][ERR][SN: FILE-$SN DB-$DB_SN параметры не совпали]" >> $LOG
+    echo "[$DATE_STR][$TIME_STR][$MODULE_NAME][Failed][SN: FILE-$SN DB-$DB_SN параметры не совпали]" >> $LOG
 fi
 # VERS
 VERS=$(cat $TARGET | grep vers -i | grep -oE '[0-9]*\.?[0-9]+')
@@ -348,7 +344,7 @@ if echo "$VERS" | grep -wq "$DB_VERS"; then
     # запись в log
     DATE_STR=$(date +"%d.%m.%Y")
     TIME_STR=$(date +"%H:%M:%S")
-    echo "[$DATE_STR][$TIME_STR][$MODULE_NAME][OK][VERS: FILE-$VERS DB-$DB_VERS параметры совпали]" >> $LOG
+    echo "[$DATE_STR][$TIME_STR][$MODULE_NAME][Passed][VERS: FILE-$VERS DB-$DB_VERS параметры совпали]" >> $LOG
 else
     echo -e "${RED}FILE ==>    $STR1${NC}"
     echo -e "${RED}DB   ==>    $STR2${NC}"
@@ -356,7 +352,7 @@ else
     # запись в log
     DATE_STR=$(date +"%d.%m.%Y")
     TIME_STR=$(date +"%H:%M:%S")
-    echo "[$DATE_STR][$TIME_STR][$MODULE_NAME][ERR][VERS: FILE-$VERS DB-$DB_VERS параметры не совпали]" >> $LOG
+    echo "[$DATE_STR][$TIME_STR][$MODULE_NAME][Failed][VERS: FILE-$VERS DB-$DB_VERS параметры не совпали]" >> $LOG
 fi
 #SIMIP
 SIMIP=$(cat $TARGET | grep simip -i | awk -F'=' '{print $2}')
@@ -376,7 +372,7 @@ if echo "$SIMIP" | grep -wq "$DB_SIMIP"; then
     # запись в log
     DATE_STR=$(date +"%d.%m.%Y")
     TIME_STR=$(date +"%H:%M:%S")
-    echo "[$DATE_STR][$TIME_STR][$MODULE_NAME][OK][SIMIP: FILE-$SIMIP_LOG DB-$DB_SIMIP параметры совпали]" >> $LOG
+    echo "[$DATE_STR][$TIME_STR][$MODULE_NAME][Passed][SIMIP: FILE-$SIMIP_LOG DB-$DB_SIMIP параметры совпали]" >> $LOG
 else
     echo -e "${RED}FILE ==>    $STR1${NC}"
     echo -e "${RED}DB   ==>    $STR2${NC}"
@@ -384,7 +380,7 @@ else
     # запись в log
     DATE_STR=$(date +"%d.%m.%Y")
     TIME_STR=$(date +"%H:%M:%S")
-    echo "[$DATE_STR][$TIME_STR][$MODULE_NAME][ERR][SIMIP: FILE-$SIMIP_LOG DB-$DB_SIMIP параметры не совпали]" >> $LOG
+    echo "[$DATE_STR][$TIME_STR][$MODULE_NAME][Failed][SIMIP: FILE-$SIMIP_LOG DB-$DB_SIMIP параметры не совпали]" >> $LOG
 fi
 
 
@@ -427,7 +423,7 @@ if echo "$STR1" | grep -wq "$STR2"; then
     # запись в log
     DATE_STR=$(date +"%d.%m.%Y")
     TIME_STR=$(date +"%H:%M:%S")
-    echo "[$DATE_STR][$TIME_STR][$MODULE_NAME][OK][Параметр №1 STATUS_SYSTEM: FILE-$STATUS_SYSTEM DB-$DB_STATUS_SYSTEM параметры совпали]" >> $LOG
+    echo "[$DATE_STR][$TIME_STR][$MODULE_NAME][Passed][Параметр №1 STATUS_SYSTEM: FILE-$STATUS_SYSTEM DB-$DB_STATUS_SYSTEM параметры совпали]" >> $LOG
     ((i++))
     if [ "$i" -ge "$COUNTERS" ]; then
         # Запускаем подменю программы
@@ -441,7 +437,7 @@ else
     # запись в log
     DATE_STR=$(date +"%d.%m.%Y")
     TIME_STR=$(date +"%H:%M:%S")
-    echo "[$DATE_STR][$TIME_STR][$MODULE_NAME][ERR][Параметр №1 STATUS_SYSTEM: FILE-$STATUS_SYSTEM DB-$DB_STATUS_SYSTEM параметры не совпали]" >> $LOG
+    echo "[$DATE_STR][$TIME_STR][$MODULE_NAME][Failed][Параметр №1 STATUS_SYSTEM: FILE-$STATUS_SYSTEM DB-$DB_STATUS_SYSTEM параметры не совпали]" >> $LOG
     ((i++))
     if [ "$i" -ge "$COUNTERS" ]; then
         # Запускаем подменю программы
@@ -470,7 +466,7 @@ if echo "$STR1" | grep -wq "$STR2"; then
     # запись в log
     DATE_STR=$(date +"%d.%m.%Y")
     TIME_STR=$(date +"%H:%M:%S")
-    echo "[$DATE_STR][$TIME_STR][$MODULE_NAME][OK][Параметр №2 VOLUME_PULSE: FILE-$VOLUME_PULSE DB-$DB_VOLUME_PULSE параметры совпали]" >> $LOG
+    echo "[$DATE_STR][$TIME_STR][$MODULE_NAME][Passed][Параметр №2 VOLUME_PULSE: FILE-$VOLUME_PULSE DB-$DB_VOLUME_PULSE параметры совпали]" >> $LOG
     ((i++))
     if [ "$i" -ge "$COUNTERS" ]; then
         # Запускаем подменю программы
@@ -482,7 +478,7 @@ else
     echo "---------------------------"
     DATE_STR=$(date +"%d.%m.%Y")
     TIME_STR=$(date +"%H:%M:%S")
-    echo "[$DATE_STR][$TIME_STR][$MODULE_NAME][ERR][Параметр №2 VOLUME_PULSE: FILE-$VOLUME_PULSE DB-$DB_VOLUME_PULSE параметры не совпали]" >> $LOG
+    echo "[$DATE_STR][$TIME_STR][$MODULE_NAME][Failed][Параметр №2 VOLUME_PULSE: FILE-$VOLUME_PULSE DB-$DB_VOLUME_PULSE параметры не совпали]" >> $LOG
     ((i++))
     if [ "$i" -ge "$COUNTERS" ]; then
         # Запускаем подменю программы
@@ -511,7 +507,7 @@ if echo "$STR1" | grep -wq "$STR2"; then
     # запись в log
     DATE_STR=$(date +"%d.%m.%Y")
     TIME_STR=$(date +"%H:%M:%S")
-    echo "[$DATE_STR][$TIME_STR][$MODULE_NAME][OK][Параметр №3 CURRENT_COUNTER: FILE-$CURRENT_COUNTER DB-$DB_CURRENT_COUNTER параметры совпали]" >> $LOG
+    echo "[$DATE_STR][$TIME_STR][$MODULE_NAME][Passed][Параметр №3 CURRENT_COUNTER: FILE-$CURRENT_COUNTER DB-$DB_CURRENT_COUNTER параметры совпали]" >> $LOG
     ((i++))
     if [ "$i" -ge "$COUNTERS" ]; then
         # Запускаем подменю программы
@@ -524,7 +520,7 @@ else
     # запись в log
     DATE_STR=$(date +"%d.%m.%Y")
     TIME_STR=$(date +"%H:%M:%S")
-    echo "[$DATE_STR][$TIME_STR][$MODULE_NAME][ERR][Параметр №3 CURRENT_COUNTER: FILE-$CURRENT_COUNTER DB-$DB_CURRENT_COUNTER параметры не совпали]" >> $LOG
+    echo "[$DATE_STR][$TIME_STR][$MODULE_NAME][Failed][Параметр №3 CURRENT_COUNTER: FILE-$CURRENT_COUNTER DB-$DB_CURRENT_COUNTER параметры не совпали]" >> $LOG
     ((i++))
     if [ "$i" -ge "$COUNTERS" ]; then
         # Запускаем подменю программы
@@ -550,7 +546,7 @@ if echo "$STR1" | grep -wq "$STR2"; then
     # запись в log
     DATE_STR=$(date +"%d.%m.%Y")
     TIME_STR=$(date +"%H:%M:%S")
-    echo "[$DATE_STR][$TIME_STR][$MODULE_NAME][OK][Параметр №4 DATETIME: FILE-$DATETIME DB-$DB_DATETIME параметры совпали]" >> $LOG
+    echo "[$DATE_STR][$TIME_STR][$MODULE_NAME][Passed][Параметр №4 DATETIME: FILE-$DATETIME DB-$DB_DATETIME параметры совпали]" >> $LOG
     ((i++))
     if [ "$i" -ge "$COUNTERS" ]; then
         # Запускаем подменю программы
@@ -563,7 +559,7 @@ else
     # запись в log
     DATE_STR=$(date +"%d.%m.%Y")
     TIME_STR=$(date +"%H:%M:%S")
-    echo "[$DATE_STR][$TIME_STR][$MODULE_NAME][ERR][Параметр №4 DATETIME: FILE-$DATETIME DB-$DB_DATETIME параметры не совпали]" >> $LOG
+    echo "[$DATE_STR][$TIME_STR][$MODULE_NAME][Failed][Параметр №4 DATETIME: FILE-$DATETIME DB-$DB_DATETIME параметры не совпали]" >> $LOG
     ((i++))
     if [ "$i" -ge "$COUNTERS" ]; then
         # Запускаем подменю программы
@@ -598,7 +594,7 @@ if echo "$STR1" | grep -wq "$STR2"; then
     # запись в log
     DATE_STR=$(date +"%d.%m.%Y")
     TIME_STR=$(date +"%H:%M:%S")
-    echo "[$DATE_STR][$TIME_STR][$MODULE_NAME][OK][Параметр №5 APN_ADDRESS: FILE-$APN_ADDRESS DB-$DB_APN_ADDRESS параметры совпали]" >> $LOG
+    echo "[$DATE_STR][$TIME_STR][$MODULE_NAME][Passed][Параметр №5 APN_ADDRESS: FILE-$APN_ADDRESS DB-$DB_APN_ADDRESS параметры совпали]" >> $LOG
     ((i++))
     if [ "$i" -ge "$COUNTERS" ]; then
         # Запускаем подменю программы
@@ -611,7 +607,7 @@ else
     # запись в log
     DATE_STR=$(date +"%d.%m.%Y")
     TIME_STR=$(date +"%H:%M:%S")
-    echo "[$DATE_STR][$TIME_STR][$MODULE_NAME][ERR][Параметр №5 APN_ADDRESS: FILE-$APN_ADDRESS DB-$DB_APN_ADDRESS параметры не совпали]" >> $LOG
+    echo "[$DATE_STR][$TIME_STR][$MODULE_NAME][Failed][Параметр №5 APN_ADDRESS: FILE-$APN_ADDRESS DB-$DB_APN_ADDRESS параметры не совпали]" >> $LOG
     ((i++))
     if [ "$i" -ge "$COUNTERS" ]; then
         # Запускаем подменю программы
@@ -645,7 +641,7 @@ if echo "$STR1" | grep -wq "$STR2"; then
     # запись в log
     DATE_STR=$(date +"%d.%m.%Y")
     TIME_STR=$(date +"%H:%M:%S")
-    echo "[$DATE_STR][$TIME_STR][$MODULE_NAME][OK][Параметр №6 APN_LOGIN: FILE-$APN_LOGIN DB-$DB_APN_LOGIN параметры совпали]" >> $LOG
+    echo "[$DATE_STR][$TIME_STR][$MODULE_NAME][Passed][Параметр №6 APN_LOGIN: FILE-$APN_LOGIN DB-$DB_APN_LOGIN параметры совпали]" >> $LOG
     ((i++))
     if [ "$i" -ge "$COUNTERS" ]; then
         # Запускаем подменю программы
@@ -658,7 +654,7 @@ else
     # запись в log
     DATE_STR=$(date +"%d.%m.%Y")
     TIME_STR=$(date +"%H:%M:%S")
-    echo "[$DATE_STR][$TIME_STR][$MODULE_NAME][ERR][Параметр №6 APN_LOGIN: FILE-$APN_LOGIN DB-$DB_APN_LOGIN параметры не совпали]" >> $LOG
+    echo "[$DATE_STR][$TIME_STR][$MODULE_NAME][Failed][Параметр №6 APN_LOGIN: FILE-$APN_LOGIN DB-$DB_APN_LOGIN параметры не совпали]" >> $LOG
     ((i++))
     if [ "$i" -ge "$COUNTERS" ]; then
         # Запускаем подменю программы
@@ -692,7 +688,7 @@ if echo "$STR1" | grep -wq "$STR2"; then
     # запись в log
     DATE_STR=$(date +"%d.%m.%Y")
     TIME_STR=$(date +"%H:%M:%S")
-    echo "[$DATE_STR][$TIME_STR][$MODULE_NAME][OK][Параметр №7 APN_PASSWORD: FILE-$APN_PASSWORD DB-$DB_APN_PASSWORD параметры совпали]" >> $LOG
+    echo "[$DATE_STR][$TIME_STR][$MODULE_NAME][Passed][Параметр №7 APN_PASSWORD: FILE-$APN_PASSWORD DB-$DB_APN_PASSWORD параметры совпали]" >> $LOG
     ((i++))
     if [ "$i" -ge "$COUNTERS" ]; then
         # Запускаем подменю программы
@@ -705,7 +701,7 @@ else
     # запись в log
     DATE_STR=$(date +"%d.%m.%Y")
     TIME_STR=$(date +"%H:%M:%S")
-    echo "[$DATE_STR][$TIME_STR][$MODULE_NAME][ERR][Параметр №7 APN_PASSWORD: FILE-$APN_PASSWORD DB-$DB_APN_PASSWORD параметры не совпали]" >> $LOG
+    echo "[$DATE_STR][$TIME_STR][$MODULE_NAME][Failed][Параметр №7 APN_PASSWORD: FILE-$APN_PASSWORD DB-$DB_APN_PASSWORD параметры не совпали]" >> $LOG
     ((i++))
     if [ "$i" -ge "$COUNTERS" ]; then
         # Запускаем подменю программы
@@ -739,7 +735,7 @@ if echo "$STR1" | grep -wq "$STR2"; then
     # запись в log
     DATE_STR=$(date +"%d.%m.%Y")
     TIME_STR=$(date +"%H:%M:%S")
-    echo "[$DATE_STR][$TIME_STR][$MODULE_NAME][OK][Параметр №8 TCP_ADDRESS: FILE-$TCP_ADDRESS DB-$DB_TCP_ADDRESS параметры совпали]" >> $LOG
+    echo "[$DATE_STR][$TIME_STR][$MODULE_NAME][Passed][Параметр №8 TCP_ADDRESS: FILE-$TCP_ADDRESS DB-$DB_TCP_ADDRESS параметры совпали]" >> $LOG
     ((i++))
     if [ "$i" -ge "$COUNTERS" ]; then
         # Запускаем подменю программы
@@ -752,7 +748,7 @@ else
     # запись в log
     DATE_STR=$(date +"%d.%m.%Y")
     TIME_STR=$(date +"%H:%M:%S")
-    echo "[$DATE_STR][$TIME_STR][$MODULE_NAME][ERR][Параметр №8 TCP_ADDRESS: FILE-$TCP_ADDRESS DB-$DB_TCP_ADDRESS параметры не совпали]" >> $LOG
+    echo "[$DATE_STR][$TIME_STR][$MODULE_NAME][Failed][Параметр №8 TCP_ADDRESS: FILE-$TCP_ADDRESS DB-$DB_TCP_ADDRESS параметры не совпали]" >> $LOG
     ((i++))
     if [ "$i" -ge "$COUNTERS" ]; then
         # Запускаем подменю программы
@@ -779,7 +775,7 @@ if echo "$STR1" | grep -wq "$STR2"; then
     # запись в log
     DATE_STR=$(date +"%d.%m.%Y")
     TIME_STR=$(date +"%H:%M:%S")
-    echo "[$DATE_STR][$TIME_STR][$MODULE_NAME][OK][Параметр №9 SMS_PHONE: FILE-$SMS_PHONE DB-$DB_SMS_PHONE параметры совпали]" >> $LOG
+    echo "[$DATE_STR][$TIME_STR][$MODULE_NAME][Passed][Параметр №9 SMS_PHONE: FILE-$SMS_PHONE DB-$DB_SMS_PHONE параметры совпали]" >> $LOG
     ((i++))
     if [ "$i" -ge "$COUNTERS" ]; then
         # Запускаем подменю программы
@@ -792,7 +788,7 @@ else
     # запись в log
     DATE_STR=$(date +"%d.%m.%Y")
     TIME_STR=$(date +"%H:%M:%S")
-    echo "[$DATE_STR][$TIME_STR][$MODULE_NAME][ERR][Параметр №9 SMS_PHONE: FILE-$SMS_PHONE DB-$DB_SMS_PHONE параметры не совпали]" >> $LOG
+    echo "[$DATE_STR][$TIME_STR][$MODULE_NAME][Failed][Параметр №9 SMS_PHONE: FILE-$SMS_PHONE DB-$DB_SMS_PHONE параметры не совпали]" >> $LOG
     ((i++))
     if [ "$i" -ge "$COUNTERS" ]; then
         # Запускаем подменю программы
@@ -827,7 +823,7 @@ if [ -n "$select" ]; then
     # запись в log
     DATE_STR=$(date +"%d.%m.%Y")
     TIME_STR=$(date +"%H:%M:%S")
-    echo "[$DATE_STR][$TIME_STR][$MODULE_NAME][OK][Параметр №10 BALANCE_PHONE: FILE-$BALANCE_PHONE DB-$DB_BALANCE_PHONE параметры совпали]" >> $LOG
+    echo "[$DATE_STR][$TIME_STR][$MODULE_NAME][Passed][Параметр №10 BALANCE_PHONE: FILE-$BALANCE_PHONE DB-$DB_BALANCE_PHONE параметры совпали]" >> $LOG
     ((i++))
     if [ "$i" -ge "$COUNTERS" ]; then
         # Запускаем подменю программы
@@ -840,7 +836,7 @@ else
     # запись в log
     DATE_STR=$(date +"%d.%m.%Y")
     TIME_STR=$(date +"%H:%M:%S")
-    echo "[$DATE_STR][$TIME_STR][$MODULE_NAME][ERR][Параметр №10 BALANCE_PHONE: FILE-$BALANCE_PHONE DB-$DB_BALANCE_PHONE параметры не совпали]" >> $LOG
+    echo "[$DATE_STR][$TIME_STR][$MODULE_NAME][Failed][Параметр №10 BALANCE_PHONE: FILE-$BALANCE_PHONE DB-$DB_BALANCE_PHONE параметры не совпали]" >> $LOG
     ((i++))
     if [ "$i" -ge "$COUNTERS" ]; then
         # Запускаем подменю программы
@@ -874,7 +870,7 @@ if echo "$STR1" | grep -wq "$STR2"; then
     # запись в log
     DATE_STR=$(date +"%d.%m.%Y")
     TIME_STR=$(date +"%H:%M:%S")
-    echo "[$DATE_STR][$TIME_STR][$MODULE_NAME][OK][Параметр №11 MODE_TRANSFER: FILE-$MODE_TRANSFER DB-$DB_MODE_TRANSFER параметры совпали]" >> $LOG
+    echo "[$DATE_STR][$TIME_STR][$MODULE_NAME][Passed][Параметр №11 MODE_TRANSFER: FILE-$MODE_TRANSFER DB-$DB_MODE_TRANSFER параметры совпали]" >> $LOG
     ((i++))
     if [ "$i" -ge "$COUNTERS" ]; then
         # Запускаем подменю программы
@@ -887,7 +883,7 @@ else
     # запись в log
     DATE_STR=$(date +"%d.%m.%Y")
     TIME_STR=$(date +"%H:%M:%S")
-    echo "[$DATE_STR][$TIME_STR][$MODULE_NAME][ERR][Параметр №11 MODE_TRANSFER: FILE-$MODE_TRANSFER DB-$DB_MODE_TRANSFER параметры не совпали]" >> $LOG
+    echo "[$DATE_STR][$TIME_STR][$MODULE_NAME][Failed][Параметр №11 MODE_TRANSFER: FILE-$MODE_TRANSFER DB-$DB_MODE_TRANSFER параметры не совпали]" >> $LOG
     ((i++))
     if [ "$i" -ge "$COUNTERS" ]; then
         # Запускаем подменю программы
@@ -917,7 +913,7 @@ if echo "$STR1" | grep -wq "$STR2"; then
     # запись в log
     DATE_STR=$(date +"%d.%m.%Y")
     TIME_STR=$(date +"%H:%M:%S")
-    echo "[$DATE_STR][$TIME_STR][$MODULE_NAME][OK][Параметр №12 BATTERY: FILE-$BATTERY DB-$DB_BATTERY параметры совпали]" >> $LOG
+    echo "[$DATE_STR][$TIME_STR][$MODULE_NAME][Passed][Параметр №12 BATTERY: FILE-$BATTERY DB-$DB_BATTERY параметры совпали]" >> $LOG
     ((i++))
     if [ "$i" -ge "$COUNTERS" ]; then
         # Запускаем подменю программы
@@ -930,7 +926,7 @@ else
     # запись в log
     DATE_STR=$(date +"%d.%m.%Y")
     TIME_STR=$(date +"%H:%M:%S")
-    echo "[$DATE_STR][$TIME_STR][$MODULE_NAME][ERR][Параметр №12 BATTERY: FILE-$BATTERY DB-$DB_BATTERY параметры не совпали]" >> $LOG
+    echo "[$DATE_STR][$TIME_STR][$MODULE_NAME][Failed][Параметр №12 BATTERY: FILE-$BATTERY DB-$DB_BATTERY параметры не совпали]" >> $LOG
     ((i++))
     if [ "$i" -ge "$COUNTERS" ]; then
         # Запускаем подменю программы
@@ -956,7 +952,7 @@ if echo "$STR1" | grep -wq "$STR2"; then
     # запись в log
     DATE_STR=$(date +"%d.%m.%Y")
     TIME_STR=$(date +"%H:%M:%S")
-    echo "[$DATE_STR][$TIME_STR][$MODULE_NAME][OK][Параметр №13 APN_PASSWORD: FILE-$BATTERY DB-$DB_BATTERY параметры совпали]" >> $LOG
+    echo "[$DATE_STR][$TIME_STR][$MODULE_NAME][Passed][Параметр №13 APN_PASSWORD: FILE-$BATTERY DB-$DB_BATTERY параметры совпали]" >> $LOG
     ((i++))
     if [ "$i" -ge "$COUNTERS" ]; then
         # Запускаем подменю программы
@@ -969,7 +965,7 @@ else
     # запись в log
     DATE_STR=$(date +"%d.%m.%Y")
     TIME_STR=$(date +"%H:%M:%S")
-    echo "[$DATE_STR][$TIME_STR][$MODULE_NAME][ERR][Параметр №13 APN_PASSWORD: FILE-$BATTERY DB-$DB_BATTERY параметры не совпали]" >> $LOG
+    echo "[$DATE_STR][$TIME_STR][$MODULE_NAME][Failed][Параметр №13 APN_PASSWORD: FILE-$BATTERY DB-$DB_BATTERY параметры не совпали]" >> $LOG
     ((i++))
     if [ "$i" -ge "$COUNTERS" ]; then
         # Запускаем подменю программы
@@ -1003,7 +999,7 @@ if echo "$STR1" | grep -wq "$STR2"; then
     # запись в log
     DATE_STR=$(date +"%d.%m.%Y")
     TIME_STR=$(date +"%H:%M:%S")
-    echo "[$DATE_STR][$TIME_STR][$MODULE_NAME][OK][Параметр №14 RESERVE_INTERVAL: FILE-$RESERVE_INTERVAL DB-$DB_RESERVE_INTERVAL параметры совпали]" >> $LOG
+    echo "[$DATE_STR][$TIME_STR][$MODULE_NAME][Passed][Параметр №14 RESERVE_INTERVAL: FILE-$RESERVE_INTERVAL DB-$DB_RESERVE_INTERVAL параметры совпали]" >> $LOG
     ((i++))
     if [ "$i" -ge "$COUNTERS" ]; then
         # Запускаем подменю программы
@@ -1016,7 +1012,7 @@ else
     # запись в log
     DATE_STR=$(date +"%d.%m.%Y")
     TIME_STR=$(date +"%H:%M:%S")
-    echo "[$DATE_STR][$TIME_STR][$MODULE_NAME][ERR][Параметр №14 RESERVE_INTERVAL: FILE-$RESERVE_INTERVAL DB-$DB_RESERVE_INTERVAL параметры не совпали]" >> $LOG
+    echo "[$DATE_STR][$TIME_STR][$MODULE_NAME][Failed][Параметр №14 RESERVE_INTERVAL: FILE-$RESERVE_INTERVAL DB-$DB_RESERVE_INTERVAL параметры не совпали]" >> $LOG
     ((i++))
     if [ "$i" -ge "$COUNTERS" ]; then
         # Запускаем подменю программы
@@ -1041,7 +1037,7 @@ if echo "$STR1" | grep -wq "$STR2"; then
     # запись в log
     DATE_STR=$(date +"%d.%m.%Y")
     TIME_STR=$(date +"%H:%M:%S")
-    echo "[$DATE_STR][$TIME_STR][$MODULE_NAME][OK][Параметр №15 SEANCECNT_MAX: FILE-$SEANCECNT_MAX DB-$DB_SEANCECNT_MAX параметры совпали]" >> $LOG
+    echo "[$DATE_STR][$TIME_STR][$MODULE_NAME][Passed][Параметр №15 SEANCECNT_MAX: FILE-$SEANCECNT_MAX DB-$DB_SEANCECNT_MAX параметры совпали]" >> $LOG
     ((i++))
     if [ "$i" -ge "$COUNTERS" ]; then
         # Запускаем подменю программы
@@ -1054,7 +1050,7 @@ else
     # запись в log
     DATE_STR=$(date +"%d.%m.%Y")
     TIME_STR=$(date +"%H:%M:%S")
-    echo "[$DATE_STR][$TIME_STR][$MODULE_NAME][ERR][Параметр №15 SEANCECNT_MAX: FILE-$SEANCECNT_MAX DB-$DB_SEANCECNT_MAX параметры не совпали]" >> $LOG
+    echo "[$DATE_STR][$TIME_STR][$MODULE_NAME][Failed][Параметр №15 SEANCECNT_MAX: FILE-$SEANCECNT_MAX DB-$DB_SEANCECNT_MAX параметры не совпали]" >> $LOG
     ((i++))
     if [ "$i" -ge "$COUNTERS" ]; then
         # Запускаем подменю программы
@@ -1088,7 +1084,7 @@ if echo "$STR1" | grep -wq "$STR2"; then
     # запись в log
     DATE_STR=$(date +"%d.%m.%Y")
     TIME_STR=$(date +"%H:%M:%S")
-    echo "[$DATE_STR][$TIME_STR][$MODULE_NAME][OK][Параметр №16 SEANCECNT: FILE-$SEANCECNT DB-$DB_SEANCECNT параметры совпали]" >> $LOG
+    echo "[$DATE_STR][$TIME_STR][$MODULE_NAME][Passed][Параметр №16 SEANCECNT: FILE-$SEANCECNT DB-$DB_SEANCECNT параметры совпали]" >> $LOG
     ((i++))
     if [ "$i" -ge "$COUNTERS" ]; then
         # Запускаем подменю программы
@@ -1101,7 +1097,7 @@ else
     # запись в log
     DATE_STR=$(date +"%d.%m.%Y")
     TIME_STR=$(date +"%H:%M:%S")
-    echo "[$DATE_STR][$TIME_STR][$MODULE_NAME][ERR][Параметр №16 SEANCECNT: FILE-$SEANCECNT DB-$DB_SEANCECNT параметры не совпали]" >> $LOG
+    echo "[$DATE_STR][$TIME_STR][$MODULE_NAME][Failed][Параметр №16 SEANCECNT: FILE-$SEANCECNT DB-$DB_SEANCECNT параметры не совпали]" >> $LOG
     ((i++))
     if [ "$i" -ge "$COUNTERS" ]; then
         # Запускаем подменю программы
@@ -1135,7 +1131,7 @@ if echo "$STR1" | grep -wq "$STR2"; then
     # запись в log
     DATE_STR=$(date +"%d.%m.%Y")
     TIME_STR=$(date +"%H:%M:%S")
-    echo "[$DATE_STR][$TIME_STR][$MODULE_NAME][OK][Параметр №17 SEANCECNT_ERR: FILE-$SEANCECNT_ERR DB-$DB_SEANCECNT_ERR параметры совпали]" >> $LOG
+    echo "[$DATE_STR][$TIME_STR][$MODULE_NAME][Passed][Параметр №17 SEANCECNT_ERR: FILE-$SEANCECNT_ERR DB-$DB_SEANCECNT_ERR параметры совпали]" >> $LOG
     ((i++))
     if [ "$i" -ge "$COUNTERS" ]; then
         # Запускаем подменю программы
@@ -1148,7 +1144,7 @@ else
     # запись в log
     DATE_STR=$(date +"%d.%m.%Y")
     TIME_STR=$(date +"%H:%M:%S")
-    echo "[$DATE_STR][$TIME_STR][$MODULE_NAME][ERR][Параметр №17 SEANCECNT_ERR: FILE-$SEANCECNT_ERR DB-$DB_SEANCECNT_ERR параметры не совпали]" >> $LOG
+    echo "[$DATE_STR][$TIME_STR][$MODULE_NAME][Failed][Параметр №17 SEANCECNT_ERR: FILE-$SEANCECNT_ERR DB-$DB_SEANCECNT_ERR параметры не совпали]" >> $LOG
     ((i++))
     if [ "$i" -ge "$COUNTERS" ]; then
         # Запускаем подменю программы
@@ -1173,7 +1169,7 @@ if echo "$STR1" | grep -wq "$STR2"; then
     # запись в log
     DATE_STR=$(date +"%d.%m.%Y")
     TIME_STR=$(date +"%H:%M:%S")
-    echo "[$DATE_STR][$TIME_STR][$MODULE_NAME][OK][Параметр №18 GAS_DAY: FILE-$GAS_DAY DB-$DB_GAS_DAY параметры совпали]" >> $LOG
+    echo "[$DATE_STR][$TIME_STR][$MODULE_NAME][Passed][Параметр №18 GAS_DAY: FILE-$GAS_DAY DB-$DB_GAS_DAY параметры совпали]" >> $LOG
     ((i++))
     if [ "$i" -ge "$COUNTERS" ]; then
         # Запускаем подменю программы
@@ -1186,7 +1182,7 @@ else
     # запись в log
     DATE_STR=$(date +"%d.%m.%Y")
     TIME_STR=$(date +"%H:%M:%S")
-    echo "[$DATE_STR][$TIME_STR][$MODULE_NAME][ERR][Параметр №18 GAS_DAY: FILE-$GAS_DAY DB-$DB_GAS_DAY параметры не совпали]" >> $LOG
+    echo "[$DATE_STR][$TIME_STR][$MODULE_NAME][Failed][Параметр №18 GAS_DAY: FILE-$GAS_DAY DB-$DB_GAS_DAY параметры не совпали]" >> $LOG
     ((i++))
     if [ "$i" -ge "$COUNTERS" ]; then
         # Запускаем подменю программы
@@ -1200,7 +1196,7 @@ export PGPASSWORD=$Password
 DB_HWVERSION=$(psql -U $Login -h $Host -p $Port -d $Name -tA -c "select value from info_params.device_info_params
 where device_id=$id and attribute_id=100;")
 unset PGPASSWORD
-SEANCECNT_MAX=${arr[$i]}
+HWVERSION=${arr[$i]}
 STR1="HWVERSION: ${arr[$i]}"
 STR2="HWVERSION: $DB_HWVERSION"
 sleep 0.2
@@ -1211,7 +1207,7 @@ if echo "$STR1" | grep -wq "$STR2"; then
     # запись в log
     DATE_STR=$(date +"%d.%m.%Y")
     TIME_STR=$(date +"%H:%M:%S")
-    echo "[$DATE_STR][$TIME_STR][$MODULE_NAME][OK][Параметр №19 HWVERSION: FILE-$HWVERSION DB-$DB_HWVERSION параметры совпали]" >> $LOG
+    echo "[$DATE_STR][$TIME_STR][$MODULE_NAME][Passed][Параметр №19 HWVERSION: FILE-$HWVERSION DB-$DB_HWVERSION параметры совпали]" >> $LOG
     ((i++))
     if [ "$i" -ge "$COUNTERS" ]; then
         # Запускаем подменю программы
@@ -1224,7 +1220,7 @@ else
     # запись в log
     DATE_STR=$(date +"%d.%m.%Y")
     TIME_STR=$(date +"%H:%M:%S")
-    echo "[$DATE_STR][$TIME_STR][$MODULE_NAME][ERR][Параметр №19 HWVERSION: FILE-$HWVERSION DB-$DB_HWVERSION параметры не совпали]" >> $LOG
+    echo "[$DATE_STR][$TIME_STR][$MODULE_NAME][Failed][Параметр №19 HWVERSION: FILE-$HWVERSION DB-$DB_HWVERSION параметры не совпали]" >> $LOG
     ((i++))
     if [ "$i" -ge "$COUNTERS" ]; then
         # Запускаем подменю программы
@@ -1258,7 +1254,7 @@ if echo "$STR1" | grep -wq "$STR2"; then
     # запись в log
     DATE_STR=$(date +"%d.%m.%Y")
     TIME_STR=$(date +"%H:%M:%S")
-    echo "[$DATE_STR][$TIME_STR][$MODULE_NAME][OK][Параметр №20 AUTOSWITH: FILE-$AUTOSWITH DB-$DB_AUTOSWITH параметры совпали]" >> $LOG
+    echo "[$DATE_STR][$TIME_STR][$MODULE_NAME][Passed][Параметр №20 AUTOSWITH: FILE-$AUTOSWITH DB-$DB_AUTOSWITH параметры совпали]" >> $LOG
     ((i++))
     if [ "$i" -ge "$COUNTERS" ]; then
         # Запускаем подменю программы
@@ -1271,7 +1267,7 @@ else
     # запись в log
     DATE_STR=$(date +"%d.%m.%Y")
     TIME_STR=$(date +"%H:%M:%S")
-    echo "[$DATE_STR][$TIME_STR][$MODULE_NAME][ERR][Параметр №20 AUTOSWITH: FILE-$AUTOSWITH DB-$DB_AUTOSWITH параметры не совпали]" >> $LOG
+    echo "[$DATE_STR][$TIME_STR][$MODULE_NAME][Failed][Параметр №20 AUTOSWITH: FILE-$AUTOSWITH DB-$DB_AUTOSWITH параметры не совпали]" >> $LOG
     ((i++))
     if [ "$i" -ge "$COUNTERS" ]; then
         # Запускаем подменю программы
@@ -1293,6 +1289,10 @@ if echo "$STR1" | grep -wq "$STR2"; then
     echo -e "${GREEN}FILE ==>    $STR1${NC}"
     echo -e "${GREEN}DB   ==>    $STR2${NC}"
     echo "---------------------------"
+    # запись в log
+    DATE_STR=$(date +"%d.%m.%Y")
+    TIME_STR=$(date +"%H:%M:%S")
+    echo "[$DATE_STR][$TIME_STR][$MODULE_NAME][Passed][Параметр №21 LASTCHANGEARCNUM: FILE-$LASTCHANGEARCNUM DB-$DB_LASTCHANGEARCNUM параметры совпали]" >> $LOG
     ((i++))
     if [ "$i" -ge "$COUNTERS" ]; then
         # Запускаем подменю программы
@@ -1302,6 +1302,10 @@ else
     echo -e "${RED}FILE ==>    $STR1${NC}"
     echo -e "${RED}DB   ==>    $STR2${NC}"
     echo "---------------------------"
+    # запись в log
+    DATE_STR=$(date +"%d.%m.%Y")
+    TIME_STR=$(date +"%H:%M:%S")
+    echo "[$DATE_STR][$TIME_STR][$MODULE_NAME][Failed][Параметр №21 LASTCHANGEARCNUM: FILE-$LASTCHANGEARCNUM DB-$DB_LASTCHANGEARCNUM параметры не совпали]" >> $LOG
     ((i++))
     if [ "$i" -ge "$COUNTERS" ]; then
         # Запускаем подменю программы
@@ -1325,6 +1329,10 @@ if (( $(echo "$VERS_S < 1.273700" | bc -l) )); then
             echo -e "${GREEN}FILE ==>    $STR1${NC}"
             echo -e "${GREEN}DB   ==>    $STR2${NC}"
             echo "---------------------------"
+            # запись в log
+            DATE_STR=$(date +"%d.%m.%Y")
+            TIME_STR=$(date +"%H:%M:%S")
+            echo "[$DATE_STR][$TIME_STR][$MODULE_NAME][Passed][Параметр №22 LASTSYSARCNUM: FILE- DB-$DB_LASTSYSARCNUM параметры совпали]" >> $LOG
             ((i++))
             if [ "$i" -ge "$COUNTERS" ]; then
                 # Запускаем подменю программы
@@ -1334,6 +1342,10 @@ if (( $(echo "$VERS_S < 1.273700" | bc -l) )); then
             echo -e "${RED}FILE ==>    $STR1${NC}"
             echo -e "${RED}DB   ==>    $STR2${NC}"
             echo "---------------------------"
+            # запись в log
+            DATE_STR=$(date +"%d.%m.%Y")
+            TIME_STR=$(date +"%H:%M:%S")
+            echo "[$DATE_STR][$TIME_STR][$MODULE_NAME][Failed][Параметр №22 LASTSYSARCNUM: FILE- DB-$DB_LASTSYSARCNUM параметры не совпали]" >> $LOG
             ((i++))
             if [ "$i" -ge "$COUNTERS" ]; then
                 # Запускаем подменю программы
@@ -1354,6 +1366,10 @@ else
             echo -e "${GREEN}FILE ==>    $STR1${NC}"
             echo -e "${GREEN}DB   ==>    $STR2${NC}"
             echo "---------------------------"
+            # запись в log
+            DATE_STR=$(date +"%d.%m.%Y")
+            TIME_STR=$(date +"%H:%M:%S")
+            echo "[$DATE_STR][$TIME_STR][$MODULE_NAME][Passed][Параметр №22 LASTSYSARCNUM: FILE- DB-$DB_LASTSYSARCNUM параметры совпали]" >> $LOG
             ((i++))
             if [ "$i" -ge "$COUNTERS" ]; then
                 # Запускаем подменю программы
@@ -1363,6 +1379,10 @@ else
             echo -e "${RED}FILE ==>    $STR1${NC}"
             echo -e "${RED}DB   ==>    $STR2${NC}"
             echo "---------------------------"
+            # запись в log
+            DATE_STR=$(date +"%d.%m.%Y")
+            TIME_STR=$(date +"%H:%M:%S")
+            echo "[$DATE_STR][$TIME_STR][$MODULE_NAME][Failed][Параметр №22 LASTSYSARCNUM: FILE- DB-$DB_LASTSYSARCNUM параметры не совпали]" >> $LOG
             ((i++))
             if [ "$i" -ge "$COUNTERS" ]; then
                 # Запускаем подменю программы
@@ -1384,6 +1404,10 @@ else
             echo -e "${GREEN}FILE ==>    $STR1${NC}"
             echo -e "${GREEN}DB   ==>    $STR2${NC}"
             echo "---------------------------"
+            # запись в log
+            DATE_STR=$(date +"%d.%m.%Y")
+            TIME_STR=$(date +"%H:%M:%S")
+            echo "[$DATE_STR][$TIME_STR][$MODULE_NAME][Passed][Параметр №22 LASTSYSARCNUM: FILE-$LASTSYSARCNUM DB-$DB_LASTSYSARCNUM параметры совпали]" >> $LOG
             ((i++))
             if [ "$i" -ge "$COUNTERS" ]; then
                 # Запускаем подменю программы
@@ -1393,6 +1417,10 @@ else
             echo -e "${RED}FILE ==>    $STR1${NC}"
             echo -e "${RED}DB   ==>    $STR2${NC}"
             echo "---------------------------"
+            # запись в log
+            DATE_STR=$(date +"%d.%m.%Y")
+            TIME_STR=$(date +"%H:%M:%S")
+            echo "[$DATE_STR][$TIME_STR][$MODULE_NAME][Failed][Параметр №22 LASTSYSARCNUM: FILE-$LASTSYSARCNUM DB-$DB_LASTSYSARCNUM параметры не совпали]" >> $LOG
             ((i++))
             if [ "$i" -ge "$COUNTERS" ]; then
                 # Запускаем подменю программы
@@ -1414,6 +1442,10 @@ if echo "$STR1" | grep -wq "$STR2"; then
     echo -e "${GREEN}FILE ==>    $STR1${NC}"
     echo -e "${GREEN}DB   ==>    $STR2${NC}"
     echo "---------------------------"
+    # запись в log
+    DATE_STR=$(date +"%d.%m.%Y")
+    TIME_STR=$(date +"%H:%M:%S")
+    echo "[$DATE_STR][$TIME_STR][$MODULE_NAME][Passed][Параметр №23 LASTHOURARCNUM: FILE-$LASTHOURARCNUM DB-$DB_LASTHOURARCNUM параметры совпали]" >> $LOG
     ((i++))
     if [ "$i" -ge "$COUNTERS" ]; then
         # Запускаем подменю программы
@@ -1423,6 +1455,10 @@ else
     echo -e "${RED}FILE ==>    $STR1${NC}"
     echo -e "${RED}DB   ==>    $STR2${NC}"
     echo "---------------------------"
+    # запись в log
+    DATE_STR=$(date +"%d.%m.%Y")
+    TIME_STR=$(date +"%H:%M:%S")
+    echo "[$DATE_STR][$TIME_STR][$MODULE_NAME][Failed][Параметр №23 LASTHOURARCNUM: FILE-$LASTHOURARCNUM DB-$DB_LASTHOURARCNUM параметры не совпали]" >> $LOG
     ((i++))
     if [ "$i" -ge "$COUNTERS" ]; then
         # Запускаем подменю программы
@@ -1444,6 +1480,10 @@ if echo "$STR1" | grep -wq "$STR2"; then
     echo -e "${GREEN}FILE ==>    $STR1${NC}"
     echo -e "${GREEN}DB   ==>    $STR2${NC}"
     echo "---------------------------"
+    # запись в log
+    DATE_STR=$(date +"%d.%m.%Y")
+    TIME_STR=$(date +"%H:%M:%S")
+    echo "[$DATE_STR][$TIME_STR][$MODULE_NAME][Passed][Параметр №24 LASTDAYARCNUM: FILE-$LASTDAYARCNUM DB-$DB_LASTDAYARCNUM параметры совпали]" >> $LOG
     ((i++))
     if [ "$i" -ge "$COUNTERS" ]; then
         # Запускаем подменю программы
@@ -1453,6 +1493,10 @@ else
     echo -e "${RED}FILE ==>    $STR1${NC}"
     echo -e "${RED}DB   ==>    $STR2${NC}"
     echo "---------------------------"
+    # запись в log
+    DATE_STR=$(date +"%d.%m.%Y")
+    TIME_STR=$(date +"%H:%M:%S")
+    echo "[$DATE_STR][$TIME_STR][$MODULE_NAME][Failed][Параметр №24 LASTDAYARCNUM: FILE-$LASTDAYARCNUM DB-$DB_LASTDAYARCNUM параметры не совпали]" >> $LOG
     ((i++))
     if [ "$i" -ge "$COUNTERS" ]; then
         # Запускаем подменю программы
@@ -1474,18 +1518,24 @@ if echo "$STR1" | grep -wq "$STR2"; then
     echo -e "${GREEN}FILE ==>    $STR1${NC}"
     echo -e "${GREEN}DB   ==>    $STR2${NC}"
     echo "---------------------------"
+    # запись в log
+    DATE_STR=$(date +"%d.%m.%Y")
+    TIME_STR=$(date +"%H:%M:%S")
+    echo "[$DATE_STR][$TIME_STR][$MODULE_NAME][Passed][Параметр №25 P_ABS: FILE-$P_ABS DB-$DB_P_ABS параметры совпали]" >> $LOG
     ((i++))
     if [ "$i" -ge "$COUNTERS" ]; then
-        # Запускаем подменю программы
         exit 0
     fi
 else
     echo -e "${RED}FILE ==>    $STR1${NC}"
     echo -e "${RED}DB   ==>    $STR2${NC}"
     echo "---------------------------"
+    # запись в log
+    DATE_STR=$(date +"%d.%m.%Y")
+    TIME_STR=$(date +"%H:%M:%S")
+    echo "[$DATE_STR][$TIME_STR][$MODULE_NAME][Failed][Параметр №25 P_ABS: FILE-$P_ABS DB-$DB_P_ABS параметры не совпали]" >> $LOG
     ((i++))
     if [ "$i" -ge "$COUNTERS" ]; then
-        # Запускаем подменю программы
         exit 0
     fi
 fi
@@ -2190,8 +2240,12 @@ export PGPASSWORD=$Password
 DB_CURRENT_FLOW=$(psql -U $Login -h $Host -p $Port -d $Name -tA -c "select value from info_params.device_info_params
 where device_id=$id and attribute_id=2677;")
 unset PGPASSWORD
-CURRENT_FLOW=${arr[$i]}
-STR1="CURRENT_FLOW: ${arr[$i]}"
+CURRENT_FLOW=$(echo "scale=4; ${arr[$i]} * $VOLUME_PULSE" | bc)
+# Добавляем "0" если значение меньше единицы
+if [[ "$CURRENT_FLOW" == .* ]]; then
+    CURRENT_FLOW=0$CURRENT_FLOW
+fi
+STR1="CURRENT_FLOW: $CURRENT_FLOW"
 STR2="CURRENT_FLOW: $DB_CURRENT_FLOW"
 sleep 0.2
 if echo "$STR1" | grep -wq "$STR2"; then
@@ -2219,8 +2273,12 @@ export PGPASSWORD=$Password
 DB_CURRENT_FLOW_DISPL=$(psql -U $Login -h $Host -p $Port -d $Name -tA -c "select value from info_params.device_info_params
 where device_id=$id and attribute_id=2678;")
 unset PGPASSWORD
-CURRENT_FLOW_DISPL=${arr[$i]}
-STR1="CURRENT_FLOW_DISPL: ${arr[$i]}"
+CURRENT_FLOW_DISPL=$(echo "scale=4; ${arr[$i]} * $VOLUME_PULSE" | bc)
+# Добавляем "0" если значение меньше единицы
+if [[ "$CURRENT_FLOW_DISPL" == .* ]]; then
+    CURRENT_FLOW_DISPL=0$CURRENT_FLOW_DISPL
+fi
+STR1="CURRENT_FLOW_DISPL: $CURRENT_FLOW_DISPL"
 STR2="CURRENT_FLOW_DISPL: $DB_CURRENT_FLOW_DISPL"
 sleep 0.2
 if echo "$STR1" | grep -wq "$STR2"; then
@@ -2468,7 +2526,7 @@ if echo "$STR1" | grep -wq "$STR2"; then
     ((i++))
     if [ "$i" -ge "$COUNTERS" ]; then
         # Запускаем подменю программы
-        exit 0
+        $ACTIVE_DIR/MenuAC.sh
     fi
 else
     echo -e "${RED}FILE ==>    $STR1${NC}"
@@ -2477,7 +2535,7 @@ else
     ((i++))
     if [ "$i" -ge "$COUNTERS" ]; then
         # Запускаем подменю программы
-        exit 0
+        $ACTIVE_DIR/MenuAC.sh
     fi
 fi
 
@@ -2555,7 +2613,7 @@ if echo "$STR1" | grep -wq "$STR2"; then
     ((i++))
     if [ "$i" -ge "$COUNTERS" ]; then
         # Запускаем подменю программы
-        exit 0
+        $ACTIVE_DIR/MenuAC.sh
     fi
 else
     echo -e "${RED}FILE ==>    $STR1${NC}"
@@ -2564,11 +2622,7 @@ else
     ((i++))
     if [ "$i" -ge "$COUNTERS" ]; then
         # Запускаем подменю программы
+        $ACTIVE_DIR/MenuAC.sh
         exit 0
     fi
 fi
-
-
-
-# Запускаем подменю программы
-#$ACTIVE_DIR/Menu[AC].sh
