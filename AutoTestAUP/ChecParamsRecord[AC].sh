@@ -139,6 +139,60 @@ if [ -z "$id" ]; then
     # Запускаем подменю программы
     exit 0
 fi
+
+# ПРЕДЛОЖЕНИЕ ПЕРЕЗАПИСАТЬ ФАЙЛ В БД
+
+ACTUAL_COUNTERS=$(tac $TARGET | grep -m 1 "ACTUAL COUNTERS" -a1 | head -n 1)
+IFS=';' read -r -a arr1 <<< "$ACTUAL_COUNTERS" # Преобразует строку в массив 'arr'
+export PGPASSWORD=$Password
+DB_DATETIME=$(psql -U $Login -d $Name -h $Host -p $Port -tA -c "select value from info_params.device_info_params
+where device_id=$id and attribute_id=33;")
+unset PGPASSWORD
+DATETIME=$(echo "${arr1[3]}" | awk -F'.' '{print $1"."$2".20"$3""$4}' | sed 's/,/ /g')
+if [[ "$DATETIME" != "$DB_DATETIME" ]]; then
+    echo ""
+    echo -e "\tЗначение DATETIME из файла не совпало со значением в базе данных."
+    echo -e "\tЗначение из файла: ${RED}$DATETIME${NC}"
+    echo -e "\tЗначение из БД:    ${RED}$DB_DATETIME${NC}"
+    echo ""
+    echo -e "\tВыберите дальнейшее действие"
+    echo ""
+    echo -e "\t\e[1m1. Перезаписать файл $NAME_FILE\e[0m"
+    echo -e "\t\e[1m2. Выйти в главное меню\e[0m"
+    echo -e "\t\e[1m3. Выход\e[0m"
+    echo ""
+    read -p "Введите номер опции (1-3): " choice
+
+    case $choice in
+        1)
+        cp $TARGET $IN_DIR
+        if [ -f "$IN_DIR/$NAME_FILE" ]; then
+            echo -e "\t\e[1mОбработка файла $NAME_FILE ...\e[0m"
+        fi
+        sleep 3
+        clear
+
+        ;;
+        2)
+        $ACTIVE_DIR/Menu_v0.1.sh
+        ;;
+        3)
+        echo ""
+        echo ""
+        echo "Завершение работы."
+        exit 0
+        ;;
+        *)
+        echo ""
+        echo ""
+        echo "Ошибка: Неправильный ввод."
+        ;;
+    esac
+fi
+
+# КОНЕЦ ПРЕДЛОЖЕНИЯ ПЕРЕЗАПИСАТЬ ФАЙЛ В БД
+
+
 export PGPASSWORD=$Password
 SIM_ACTIV=$(psql -U $Login -h $Host -d $Name -p $Port -tA -c "select value from info_params.device_info_params
 join dicts.attributes_dict on dicts.attributes_dict.id = info_params.device_info_params.attribute_id
@@ -153,8 +207,6 @@ DATE_STR=$(date +"%d_%m_%Y")
 # формируем имя и путь лог файла
 F_LOG="/Log/ChecParamsRecordAC_$DATE_STR.log"
 LOG="$ACTIVE_DIR$F_LOG"
-
-
 
 
 
@@ -546,7 +598,7 @@ if echo "$STR1" | grep -wq "$STR2"; then
     # запись в log
     DATE_STR=$(date +"%d.%m.%Y")
     TIME_STR=$(date +"%H:%M:%S")
-    echo "[$DATE_STR][$TIME_STR][$MODULE_NAME][OK][Параметр №5 APN_ADDRESS: FILE-$DATETIME DB-$DB_DATETIME параметры совпали]" >> $LOG
+    echo "[$DATE_STR][$TIME_STR][$MODULE_NAME][OK][Параметр №5 APN_ADDRESS: FILE-$APN_ADDRESS DB-$DB_APN_ADDRESS параметры совпали]" >> $LOG
     ((i++))
     if [ "$i" -ge "$COUNTERS" ]; then
         # Запускаем подменю программы
@@ -559,7 +611,7 @@ else
     # запись в log
     DATE_STR=$(date +"%d.%m.%Y")
     TIME_STR=$(date +"%H:%M:%S")
-    echo "[$DATE_STR][$TIME_STR][$MODULE_NAME][ERR][Параметр №5 APN_ADDRESS: FILE-$DATETIME DB-$DB_DATETIME параметры не совпали]" >> $LOG
+    echo "[$DATE_STR][$TIME_STR][$MODULE_NAME][ERR][Параметр №5 APN_ADDRESS: FILE-$APN_ADDRESS DB-$DB_APN_ADDRESS параметры не совпали]" >> $LOG
     ((i++))
     if [ "$i" -ge "$COUNTERS" ]; then
         # Запускаем подменю программы
