@@ -121,6 +121,7 @@ if [ -n "$Readout_TYPE" ]; then
     echo -e "\t${RED}Файлы из readout не обрабатываются, нет реализации на текущий момент.${NC}"
     echo ""
     $ACTIVE_DIR/MenuAC.sh
+    exit 0
 fi
 
 devnum=$(echo "$NAME_FILE" | sed 's/.*_//' | cut -d'.' -f1)
@@ -132,6 +133,7 @@ export PGPASSWORD=$Password
 id=$(psql -U $Login -h $Host -p $Port -d $Name -tA -c "select id from devices_custs.device
 where devnum='$devnum';")
 unset PGPASSWORD
+
 # ПРОВЕРКА И ПРЕДЛОЖЕНИЕ ОБРАБОТАТЬ ФАЙЛ,
 if [ -z "$id" ]; then
     echo -e "\t${RED}Прибора $devnum нет в базе данных $Name.${NC}"
@@ -148,6 +150,19 @@ where device_id=$id and attribute_id=33;")
 unset PGPASSWORD
 DATETIME=$(echo "${arr1[3]}" | awk -F'.' '{print $1"."$2".20"$3""$4}' | sed 's/,/ /g')
 if [[ "$DATETIME" != "$DB_DATETIME" ]]; then
+    # Преобразование в формат, который понимает команда date (YYYY-MM-DD HH:MM:SS)
+    # Для этого меняем местами день и месяц или используем формат ГГГГММДД
+    d1_sec=$(date -d "${DATETIME:6:4}-${DATETIME:3:2}-${DATETIME:0:2} ${DATETIME:11}" +%s)
+    d2_sec=$(date -d "${DB_DATETIME:6:4}-${DB_DATETIME:3:2}-${DB_DATETIME:0:2} ${DB_DATETIME:11}" +%s)
+    # Сравнение числовых значений
+    if [ "$d1_sec" -lt "$d2_sec" ]; then
+        echo ""
+        echo -e "\t${RED}Значения в базе данных актуальней${NC}"
+        echo ""
+        $ACTIVE_DIR/MenuAC.sh
+        exit 0
+    fi
+
     echo ""
     echo -e "\tЗначение DATETIME из файла не совпало со значением в базе данных."
     echo -e "\tЗначение из файла: ${RED}$DATETIME${NC}"
@@ -156,8 +171,9 @@ if [[ "$DATETIME" != "$DB_DATETIME" ]]; then
     echo -e "\tВыберите дальнейшее действие"
     echo ""
     echo -e "\t\e[1m1. Перезаписать файл $NAME_FILE\e[0m"
-    echo -e "\t\e[1m2. Выйти в главное меню\e[0m"
-    echo -e "\t\e[1m3. Выход\e[0m"
+    echo -e "\t\e[1m2. Выбрать другой файл\e[0m"
+    echo -e "\t\e[1m3. Выйти в главное меню\e[0m"
+    echo -e "\t\e[1m4. Выход\e[0m"
     echo ""
     read -p "Введите номер опции (1-3): " choice
 
@@ -171,9 +187,12 @@ if [[ "$DATETIME" != "$DB_DATETIME" ]]; then
         clear
         ;;
         2)
-        $ACTIVE_DIR/Menu_v0.1.sh
+        $ACTIVE_DIR/ChecParamsRecord[AC].sh
         ;;
         3)
+        $ACTIVE_DIR/Menu_v0.1.sh
+        ;;
+        4)
         echo ""
         echo ""
         echo "Завершение работы."
@@ -222,10 +241,12 @@ SMT_numbs="99 96 9 82 81 80 8 79 78 77 76 75 74 73 72 71 7 68 67 66 65 64 6 53 5
 
 #if echo "$SMT_numbs" | grep -wq "$TYPE"; then
 if ! grep -q "$TYPE" <<< "$SMT_numbs"; then
-    echo -e "${RED}Данный тип прибора не поддерживается.${NC}"
     echo ""
-    # Запускаем подменю программы
+    echo -e "\t${RED}Данный тип прибора не поддерживается.${NC}"
+    echo ""
+    $ACTIVE_DIR/MenuAC.sh
     exit 0
+
 fi
 #VER_PROTOCOL
 VER_PROTOCOL=$(cat $TARGET | grep protocol -i | grep -o '[0-9]\+')
@@ -233,9 +254,14 @@ if [[ -z "$VER_PROTOCOL" ]]; then
     VER_PROTOCOL=0
 fi
 
+export PGPASSWORD=$Password
+namerus=$(psql -U $Login -h $Host -p $Port -d $Name -tA -c "select namerus from dicts.devtypedict
+where id=$devtype_id;")
+unset PGPASSWORD
+
 echo ""
-echo -e "Обрабатываем файл: ${GREEN}$NAME_FILE${NC}"
-echo -e "Тип прибора: ${GREEN}SMT${NC}"
+echo -e "Тестируем файл: ${GREEN}$NAME_FILE${NC}"
+echo -e "Название прибора: ${GREEN}$namerus${NC}"
 echo -e "id прибора: ${GREEN}$id${NC}"
 echo -e "Версия протокола: ${GREEN}$VER_PROTOCOL${NC}"
 echo ""
@@ -252,8 +278,8 @@ echo "---------------------------"
 # запись в log
 DATE_STR=$(date +"%d.%m.%Y")
 TIME_STR=$(date +"%H:%M:%S")
-echo "[$DATE_STR][$TIME_STR][$MODULE_NAME][Обрабатываем файл: $NAME_FILE]" >> $LOG
-echo "[$DATE_STR][$TIME_STR][$MODULE_NAME][Тип прибора: SMT]" >> $LOG
+echo "[$DATE_STR][$TIME_STR][$MODULE_NAME][Тестируем файл: $NAME_FILE]" >> $LOG
+echo "[$DATE_STR][$TIME_STR][$MODULE_NAME][Название прибора: SMT]" >> $LOG
 echo "[$DATE_STR][$TIME_STR][$MODULE_NAME][id прибора: $id]" >> $LOG
 echo "[$DATE_STR][$TIME_STR][$MODULE_NAME][Версия протокола: $VER_PROTOCOL]" >> $LOG
 echo "[$DATE_STR][$TIME_STR][$MODULE_NAME][База данных: $Name]" >> $LOG

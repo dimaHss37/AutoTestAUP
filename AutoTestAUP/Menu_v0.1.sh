@@ -30,6 +30,7 @@ case $choice in
     5)
     echo ""
     echo ""
+    clear
     echo "Завершение работы."
     exit 0
     ;;

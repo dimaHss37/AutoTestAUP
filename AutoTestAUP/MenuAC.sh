@@ -4,9 +4,9 @@ ACTIVE_DIR=$(dirname "$0")
 echo ""
 echo ""
 echo -e "\t----------------------------"
-echo -e "\t\e[1m1. Запустить заново\e[0m"
+echo -e "\t\e[1m1. Выбрать другой файл\e[0m"
 echo -e "\t\e[1m2. Главное меню\e[0m"
-echo -e "\t\e[1m5. Выход\e[0m"
+echo -e "\t\e[1m3. Выход\e[0m"
 echo ""
 read -p "Введите номер опции (1-3): " choice
 
