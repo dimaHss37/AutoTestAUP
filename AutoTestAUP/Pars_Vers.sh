@@ -1,8 +1,15 @@
 #!/bin/bash
 
+VERS=1.2418
+# Комплекс или смарт?
+if [[ "$VERS" == 1.0* ]]; then
+    VERS_K=$VERS
+    VERS_S=""
+else
+    VERS_S=$VERS
+    VERS_K=""
+fi
 
-VERS_S=1.2418
-#      1.2418
 
 if [ -n "$VERS_S" ]; then
     if (( $(echo "$VERS_S >= 1.20" | bc -l) )) && (( $(echo "$VERS_S < 1.2422" | bc -l) )); then
