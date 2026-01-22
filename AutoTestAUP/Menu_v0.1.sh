@@ -13,7 +13,7 @@ echo -e "\t\e[1m4. Проверка скорости обработки файл
 echo -e "\t\e[1m5. Проверка записи параметров [ACTUAL COUNTERS]\e[0m"
 echo -e "\t\e[1m6. Выход\e[0m"
 echo ""
-read -p "Введите номер опции (1-5): " choice
+read -p "Введите номер опции (1-6): " choice
 
 case $choice in
     1)

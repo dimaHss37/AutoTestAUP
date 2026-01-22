@@ -1,5 +1,7 @@
 #!/bin/bash
 
+
+
 clear
 echo ""
 sleep 0.15
@@ -315,7 +317,8 @@ fi
 
 sleep 0.15
 # проверка подключения к базе данных PostgreSQL
-if [ "$DatabaseType" == "PostgreSQL" ]; then
+status_PostgreSQL=$(systemctl is-active "postgresql.service")
+if [[ "$DatabaseType" == "PostgreSQL" && $status_PostgreSQL = "active" ]]; then
 export PGPASSWORD=$Password
 Connection_DB=$(psql -U $Login -h $Host -p $Port -d $Name -tA -c "\l" 2>/dev/null | grep $Name)
 unset PGPASSWORD
@@ -328,3 +331,38 @@ fi
 
 
 # проверка подключения к базе данных Firebird
+
+
+
+
+
+
+
+ACTIVE_DIR=$(dirname "$0")
+echo ""
+echo ""
+echo -e "\e[1m1. Запустить заново\e[0m"
+echo -e "\e[1m2. Главное меню\e[0m"
+echo -e "\e[1m3. Выход\e[0m"
+echo ""
+read -p "Введите номер опции (1-3): " choice
+
+case $choice in
+  1)
+    $ACTIVE_DIR/AUP_Performance.sh
+    ;;
+  2)
+    $ACTIVE_DIR/Menu_v0.1.sh
+    ;;
+  3)
+    echo ""
+    echo ""
+    echo "Завершение работы."
+    exit 0
+    ;;
+  *)
+    echo ""
+    echo ""
+    echo "Ошибка: Неправильный ввод."
+    ;;
+esac
