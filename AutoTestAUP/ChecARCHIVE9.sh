@@ -1,0 +1,378 @@
+#!/bin/bash
+
+
+ACTIVE_DIR=$(dirname "$0")
+
+mkdir $ACTIVE_DIR/Log 2>/dev/null
+# назватие модуля
+MODULE_NAME="ChecARCHIVE9"
+# получаем текущую дату
+DATE_STR=$(date +"%d_%m_%Y")
+# формируем имя и путь лог файла
+F_LOG="/Log/ChecARCHIVE9_$DATE_STR.log"
+LOG="$ACTIVE_DIR$F_LOG"
+
+
+# Коды цветов
+RED="\033[31m" # Красный
+GREEN="\033[32m" # Зеленый
+NC="\033[0m" # Без цвета (сброс)
+
+# ищем "sgs.json"
+FILE_SGS_JSON=$(find /opt -type f -name "sgs.json" 2>/dev/null)
+if [ -z "$FILE_SGS_JSON" ]; then
+     echo "$Файл sgs.json не найден!"
+     exit 0
+fi
+
+DatabaseLocation=$(cat $FILE_SGS_JSON | jq -r '.AUPService.DbWriterService.DatabaseLocation')
+
+if [ "$DatabaseLocation" == "Local" ]; then
+    DatabaseType=$(cat $FILE_SGS_JSON | jq -r '.DatabaseConnection.Local.DatabaseType')
+    if [ "$DatabaseType" == "PostgreSQL" ]; then
+        Name=$(cat $FILE_SGS_JSON | jq -r '.DatabaseConnection.Local.PostgreSQL.SGS.Name')
+        Host=$(cat $FILE_SGS_JSON | jq -r '.DatabaseConnection.Local.PostgreSQL.SGS.Host')
+        Port=$(cat $FILE_SGS_JSON | jq -r '.DatabaseConnection.Local.PostgreSQL.SGS.Port')
+        Login=$(cat $FILE_SGS_JSON | jq -r '.DatabaseConnection.Local.PostgreSQL.SGS.Login')
+        Password=$(cat $FILE_SGS_JSON | jq -r '.DatabaseConnection.Local.PostgreSQL.SGS.Password')
+    else
+        echo "Firebird"
+        # Запускаем подменю программы
+        exit 0
+    fi
+else
+    if [ "$DatabaseLocation" == "Server" ]; then
+        DatabaseType=$(cat $FILE_SGS_JSON | jq -r '.DatabaseConnection.Server.DatabaseType')
+        if [ "$DatabaseType" == "PostgreSQL" ]; then
+            Name=$(cat $FILE_SGS_JSON | jq -r '.DatabaseConnection.Server.PostgreSQL.SGS.Name')
+            Host=$(cat $FILE_SGS_JSON | jq -r '.DatabaseConnection.Server.PostgreSQL.SGS.Host')
+            Port=$(cat $FILE_SGS_JSON | jq -r '.DatabaseConnection.Server.PostgreSQL.SGS.Port')
+            Login=$(cat $FILE_SGS_JSON | jq -r '.DatabaseConnection.Server.PostgreSQL.SGS.Login')
+            Password=$(cat $FILE_SGS_JSON | jq -r '.DatabaseConnection.Server.PostgreSQL.SGS.Password')
+        else
+            echo "Firebird"
+            # Запускаем подменю программы
+            exit 0
+        fi
+    else
+        echo "Некорректный sgs.json"
+    fi
+fi
+
+# МЕНЮ ВЫБОРА ФАЙЛА
+# принудительное удаление временных файлов
+rm $ACTIVE_DIR/.files_list.tmp 2>/dev/null
+rm $ACTIVE_DIR/.list1.tmp 2>/dev/null
+rm $ACTIVE_DIR/.list2.tmp 2>/dev/null
+# принудительное создание папки rdt
+mkdir $ACTIVE_DIR/rdt 2>/dev/null
+# удаление файлов с расширениен не "rdt" в папке rdt
+find $ACTIVE_DIR/rdt -type f ! -iname "*.rdt" -delete
+# подщёт количества файлов в папке
+files=$(find $ACTIVE_DIR/rdt -type f | wc -l )
+if [[ $files == 0 ]]; then
+    echo ""
+    echo "Файлов rdt в папке $ACTIVE_DIR/rdt не найдено."
+    exit 0
+fi
+ls $ACTIVE_DIR/rdt | column -t > $ACTIVE_DIR/.files_list.tmp
+
+for ((i=1; i<=$files; i++)); do
+    ind="NR==$i"
+    name=$(ls $ACTIVE_DIR/rdt | column -t | awk $ind)
+    vers=$(cat $ACTIVE_DIR/rdt/$name | grep vers -i | grep -oE '[0-9]*\.?[0-9]+')
+    prot=$(cat $ACTIVE_DIR/rdt/$name | grep "VER_PROTOCOL=")
+    if [ -z $prot ]; then
+    prot="VER_PROTOCOL=0"
+    fi
+    Application=$(cat $ACTIVE_DIR/rdt/$name | head -n 1)
+    if echo "$Application" | grep -wq "Application"; then
+        vers=$(cat $ACTIVE_DIR/rdt/$name | grep "ApplVersion" | grep -oE '[0-9]*\.[0-9]*\.[0-9]*')
+        prot="Не_поддерживается"
+    fi
+    echo -e "$name $vers $prot" >> $ACTIVE_DIR/.list1.tmp
+done
+cat $ACTIVE_DIR/.list1.tmp | column -t >> $ACTIVE_DIR/.list2.tmp
+list=$(cat $ACTIVE_DIR/.list2.tmp | nl -s ' ==> ')
+clear
+echo ""
+for ((i=1; i<=$files; i++)); do
+    ind="NR==$i"
+    echo "$list" | awk $ind
+    sleep 0.0515
+done
+
+ echo ""
+ read -p "Укажите номер файла для обработки: " NUM_FILE
+ NUM_FILE="NR==$NUM_FILE"
+ NAME_FILE=$(cat $ACTIVE_DIR/.files_list.tmp | awk $NUM_FILE)
+ rm $ACTIVE_DIR/.files_list.tmp 2>/dev/null
+ rm $ACTIVE_DIR/.list1.tmp 2>/dev/null
+ rm $ACTIVE_DIR/.list2.tmp 2>/dev/null
+ clear
+# КОНЕЦ МЕНЮ ВЫБОРА ФАЙЛА
+
+devnum=$(echo "$NAME_FILE" | sed 's/.*_//' | cut -d'.' -f1)
+
+export PGPASSWORD=$Password
+device_id=$(psql -U $Login -h $Host -p $Port -d $Name -tA -c "select id from devices_custs.device
+where devnum='$devnum';")
+unset PGPASSWORD
+
+export PGPASSWORD=$Password
+flow_id=$(psql -U $Login -h $Host -d $Name -p $Port -tA -c "SELECT id FROM devices_custs.flow
+where device_id = $device_id;")
+unset PGPASSWORD
+
+
+# Путь к обрабатываемому файлу
+TARGET="$ACTIVE_DIR/rdt/$NAME_FILE"
+
+#VER_PROTOCOL
+VER_PROTOCOL=$(cat $TARGET | grep protocol -i | grep -o '[0-9]\+')
+if [[ -z "$VER_PROTOCOL" ]]; then
+    VER_PROTOCOL=0
+fi
+if [[ "$VER_PROTOCOL" = 0 ]]; then
+    echo "Версия протокола: $VER_PROTOCOL"
+    exit 0
+fi
+
+# запись в log
+DATE_STR=$(date +"%d.%m.%Y")
+TIME_STR=$(date +"%H:%M:%S")
+echo "" >> $LOG
+echo "" >> $LOG
+echo "------------------------------------------------------------------------" >> $LOG
+echo "" >> $LOG
+echo "[$DATE_STR][$TIME_STR][$MODULE_NAME][Тестируем файл: $NAME_FILE]" >> $LOG
+echo "[$DATE_STR][$TIME_STR][$MODULE_NAME][id прибора: $device_id]" >> $LOG
+echo "[$DATE_STR][$TIME_STR][$MODULE_NAME][База данных: $Name]" >> $LOG
+echo "[$DATE_STR][$TIME_STR][$MODULE_NAME][Имя пользователя: $Login]" >> $LOG
+echo "[$DATE_STR][$TIME_STR][$MODULE_NAME][Пароль: $Password]" >> $LOG
+echo "[$DATE_STR][$TIME_STR][$MODULE_NAME][Хост: $Host]" >> $LOG
+echo "[$DATE_STR][$TIME_STR][$MODULE_NAME][Порт: $Port]" >> $LOG
+echo "" >> $LOG
+echo -e "Успешный тест: [Passed] \tТест провален: [Failed]" >> $LOG
+echo "" >> $LOG
+
+
+ARCHIVE9=$(cat $TARGET | awk '/\[ARCHIVE9\]/{f=2} f && /#/ {f=0; print; next} f' | sed '1d;$d')
+
+arcnums=$(echo "$ARCHIVE9" | wc -l)
+
+# запись в log
+DATE_STR=$(date +"%d.%m.%Y")
+TIME_STR=$(date +"%H:%M:%S")
+echo "[$DATE_STR][$TIME_STR][$MODULE_NAME][Количество записей: $arcnums]" >> $LOG
+
+for ((i=1; i<=$arcnums; i++)); do
+    ind="NR==$i"
+    line=$(echo "$ARCHIVE9" | awk $ind)
+    values=$(echo "$line" | grep -o ";" | wc -l)
+    values=$((values + 1))
+
+    IFS=';' read -r -a arr <<< "$line"
+
+   # берём данные из archives.telemetryarc
+    export PGPASSWORD=$Password
+    details=$(psql -U $Login -h $Host -d $Name -p $Port -tA -c "SELECT details FROM archives.telemetryarc
+    where device_id  = $device_id and arcnum = ${arr[0]};")
+    unset PGPASSWORD
+    SERVERCODE1=$(echo "$details" | jq -r '.SERVERCODE1')
+    SERVERCODE2=$(echo "$details" | jq -r '.SERVERCODE2')
+    SERVERCODE3=$(echo "$details" | jq -r '.SERVERCODE3')
+    TMRSTATE=$(echo "$details" | jq -r '.TMRSTATE')
+
+    export PGPASSWORD=$Password
+    DATE_START=$(psql -U $Login -h $Host -d $Name -p $Port -tA -c "SELECT date_start FROM archives.telemetryarc
+    where device_id  = $device_id and arcnum = ${arr[0]};")
+    unset PGPASSWORD
+    DATE_START=$(date -d "$DATE_START" +"%d.%m.%Y %H:%M:%S")
+
+    export PGPASSWORD=$Password
+    DATE_END=$(psql -U $Login -h $Host -d $Name -p $Port -tA -c "SELECT date_end FROM archives.telemetryarc
+    where device_id  = $device_id and arcnum = ${arr[0]};")
+    unset PGPASSWORD
+    DATE_END=$(date -d "$DATE_END" +"%d.%m.%Y %H:%M:%S")
+
+    export PGPASSWORD=$Password
+    SEANCE_NUM=$(psql -U $Login -h $Host -d $Name -p $Port -tA -c "SELECT seance_num FROM archives.telemetryarc
+    where device_id  = $device_id and arcnum = ${arr[0]};")
+    unset PGPASSWORD
+
+    export PGPASSWORD=$Password
+    ERROR_CODE=$(psql -U $Login -h $Host -d $Name -p $Port -tA -c "SELECT error_code FROM archives.telemetryarc
+    where device_id  = $device_id and arcnum = ${arr[0]};")
+    unset PGPASSWORD
+
+
+    F_SERVERCODE1=${arr[4]}
+    F_SERVERCODE2=${arr[5]}
+    F_SERVERCODE3=${arr[6]}
+    F_TMRSTATE=$(printf "%d" 0x"${arr[9]}" 2>/dev/null)
+    F_DATE_START=$(echo "${arr[1]}" | sed 's/,/ /g')
+    F_DATE_END=$(echo "${arr[2]}" | sed 's/,/ /g')
+    F_ERROR_CODE=${arr[7]}
+    F_SEANCE_NUM=${arr[8]}
+
+
+
+    echo "arcnum: ${arr[0]}"
+    echo ""
+
+    sleep 0.05
+    if echo "$F_DATE_START" | grep -wq "$DATE_START"; then
+        echo "DATE_START"
+        echo -e "${GREEN}F: $F_DATE_START${NC}"
+        echo -e "${GREEN}B: $DATE_START${NC}"
+        # запись в log
+        DATE_STR=$(date +"%d.%m.%Y")
+        TIME_STR=$(date +"%H:%M:%S")
+        echo "[$DATE_STR][$TIME_STR][$MODULE_NAME][Passed][Запись: ${arr[0]} DATE_START: FILE-$F_DATE_START DB-$DATE_START параметры совпали]" >> $LOG
+    else
+        echo "DATE_START"
+        echo -e "${RED}F: $F_DATE_START${NC}"
+        echo -e "${RED}B: $DATE_START${NC}"
+        # запись в log
+        DATE_STR=$(date +"%d.%m.%Y")
+        TIME_STR=$(date +"%H:%M:%S")
+        echo "[$DATE_STR][$TIME_STR][$MODULE_NAME][Failed][Запись: ${arr[0]} DATE_START: FILE-$F_DATE_START DB-$DATE_START параметры не совпали]" >> $LOG
+    fi
+
+    sleep 0.05
+    if echo "$F_DATE_END" | grep -wq "$DATE_END"; then
+        echo "DATE_END"
+        echo -e "${GREEN}F: $F_DATE_END${NC}"
+        echo -e "${GREEN}B: $DATE_END${NC}"
+        # запись в log
+        DATE_STR=$(date +"%d.%m.%Y")
+        TIME_STR=$(date +"%H:%M:%S")
+        echo "[$DATE_STR][$TIME_STR][$MODULE_NAME][Passed][Запись: ${arr[0]} DATE_END: FILE-$F_DATE_END DB-$DATE_END параметры совпали]" >> $LOG
+    else
+        echo "DATE_END"
+        echo -e "${RED}F: $F_DATE_END${NC}"
+        echo -e "${RED}B: $DATE_END${NC}"
+        # запись в log
+        DATE_STR=$(date +"%d.%m.%Y")
+        TIME_STR=$(date +"%H:%M:%S")
+        echo "[$DATE_STR][$TIME_STR][$MODULE_NAME][Failed][Запись: ${arr[0]} DATE_END: FILE-$F_DATE_END DB-$DATE_END параметры не совпали]" >> $LOG
+    fi
+
+    sleep 0.05
+    if echo "$F_SEANCE_NUM" | grep -wq "$SEANCE_NUM"; then
+        echo "SEANCE_NUM"
+        echo -e "${GREEN}F: $F_SEANCE_NUM${NC}"
+        echo -e "${GREEN}B: $SEANCE_NUM${NC}"
+        # запись в log
+        DATE_STR=$(date +"%d.%m.%Y")
+        TIME_STR=$(date +"%H:%M:%S")
+        echo "[$DATE_STR][$TIME_STR][$MODULE_NAME][Passed][Запись: ${arr[0]} SEANCE_NUM: FILE-$F_SEANCE_NUM DB-$SEANCE_NUM параметры совпали]" >> $LOG
+    else
+        echo "SEANCE_NUM"
+        echo -e "${RED}F: $F_SEANCE_NUM${NC}"
+        echo -e "${RED}B: $SEANCE_NUM${NC}"
+        # запись в log
+        DATE_STR=$(date +"%d.%m.%Y")
+        TIME_STR=$(date +"%H:%M:%S")
+        echo "[$DATE_STR][$TIME_STR][$MODULE_NAME][Failed][Запись: ${arr[0]} SEANCE_NUM: FILE-$F_SEANCE_NUM DB-$SEANCE_NUM параметры не совпали]" >> $LOG
+    fi
+
+    sleep 0.05
+    if [[ "$F_ERROR_CODE" == "$ERROR_CODE" ]]; then
+        echo "ERROR_CODE"
+        echo -e "${GREEN}F: $F_ERROR_CODE${NC}"
+        echo -e "${GREEN}B: $ERROR_CODE${NC}"
+        # запись в log
+        DATE_STR=$(date +"%d.%m.%Y")
+        TIME_STR=$(date +"%H:%M:%S")
+        echo "[$DATE_STR][$TIME_STR][$MODULE_NAME][Passed][Запись: ${arr[0]} ERROR_CODE: FILE-$F_ERROR_CODE DB-$ERROR_CODE параметры совпали]" >> $LOG
+    else
+        echo "ERROR_CODE"
+        echo -e "${RED}F: $F_ERROR_CODE${NC}"
+        echo -e "${RED}B: $ERROR_CODE${NC}"
+        # запись в log
+        DATE_STR=$(date +"%d.%m.%Y")
+        TIME_STR=$(date +"%H:%M:%S")
+        echo "[$DATE_STR][$TIME_STR][$MODULE_NAME][Failed][Запись: ${arr[0]} ERROR_CODE: FILE-$F_ERROR_CODE DB-$ERROR_CODE параметры не совпали]" >> $LOG
+    fi
+
+    sleep 0.05
+    if echo "$F_SERVERCODE1" | grep -wq "$SERVERCODE1"; then
+        echo "SERVERCODE1"
+        echo -e "${GREEN}F: $F_SERVERCODE1${NC}"
+        echo -e "${GREEN}B: $SERVERCODE1${NC}"
+        # запись в log
+        DATE_STR=$(date +"%d.%m.%Y")
+        TIME_STR=$(date +"%H:%M:%S")
+        echo "[$DATE_STR][$TIME_STR][$MODULE_NAME][Passed][Запись: ${arr[0]} SERVERCODE1: FILE-$F_SERVERCODE1 DB-$SERVERCODE1 параметры совпали]" >> $LOG
+    else
+        echo "SERVERCODE1"
+        echo -e "${RED}F: $F_SERVERCODE1${NC}"
+        echo -e "${RED}B: $SERVERCODE1${NC}"
+        # запись в log
+        DATE_STR=$(date +"%d.%m.%Y")
+        TIME_STR=$(date +"%H:%M:%S")
+        echo "[$DATE_STR][$TIME_STR][$MODULE_NAME][Failed][Запись: ${arr[0]} SERVERCODE1: FILE-$F_SERVERCODE1 DB-$SERVERCODE1 параметры не совпали]" >> $LOG
+    fi
+
+    sleep 0.05
+    if echo "$F_SERVERCODE2" | grep -wq "$SERVERCODE2"; then
+        echo "SERVERCODE2"
+        echo -e "${GREEN}F: $F_SERVERCODE2${NC}"
+        echo -e "${GREEN}B: $SERVERCODE2${NC}"
+        # запись в log
+        DATE_STR=$(date +"%d.%m.%Y")
+        TIME_STR=$(date +"%H:%M:%S")
+        echo "[$DATE_STR][$TIME_STR][$MODULE_NAME][Passed][Запись: ${arr[0]} SERVERCODE2: FILE-$F_SERVERCODE2 DB-$SERVERCODE2 параметры совпали]" >> $LOG
+    else
+        echo "SERVERCODE2"
+        echo -e "${RED}F: $F_SERVERCODE2${NC}"
+        echo -e "${RED}B: $SERVERCODE2${NC}"
+        # запись в log
+        DATE_STR=$(date +"%d.%m.%Y")
+        TIME_STR=$(date +"%H:%M:%S")
+        echo "[$DATE_STR][$TIME_STR][$MODULE_NAME][Failed][Запись: ${arr[0]} SERVERCODE2: FILE-$F_SERVERCODE2 DB-$SERVERCODE2 параметры не совпали]" >> $LOG
+    fi
+
+    sleep 0.05
+    if echo "$F_SERVERCODE3" | grep -wq "$SERVERCODE3"; then
+        echo "SERVERCODE3"
+        echo -e "${GREEN}F: $F_SERVERCODE3${NC}"
+        echo -e "${GREEN}B: $SERVERCODE3${NC}"
+        # запись в log
+        DATE_STR=$(date +"%d.%m.%Y")
+        TIME_STR=$(date +"%H:%M:%S")
+        echo "[$DATE_STR][$TIME_STR][$MODULE_NAME][Passed][Запись: ${arr[0]} SERVERCODE3: FILE-$F_SERVERCODE3 DB-$SERVERCODE3 параметры совпали]" >> $LOG
+    else
+        echo "SERVERCODE3"
+        echo -e "${RED}F: $F_SERVERCODE3${NC}"
+        echo -e "${RED}B: $SERVERCODE3${NC}"
+        # запись в log
+        DATE_STR=$(date +"%d.%m.%Y")
+        TIME_STR=$(date +"%H:%M:%S")
+        echo "[$DATE_STR][$TIME_STR][$MODULE_NAME][Failed][Запись: ${arr[0]} SERVERCODE3: FILE-$F_SERVERCODE3 DB-$SERVERCODE3 параметры не совпали]" >> $LOG
+    fi
+
+    sleep 0.05
+    if echo "$F_TMRSTATE" | grep -wq "$TMRSTATE"; then
+        echo "TMRSTATE"
+        echo -e "${GREEN}F: $F_TMRSTATE${NC}"
+        echo -e "${GREEN}B: $TMRSTATE${NC}"
+        # запись в log
+        DATE_STR=$(date +"%d.%m.%Y")
+        TIME_STR=$(date +"%H:%M:%S")
+        echo "[$DATE_STR][$TIME_STR][$MODULE_NAME][Passed][Запись: ${arr[0]} TMRSTATE: FILE-$F_TMRSTATE DB-$TMRSTATE параметры совпали]" >> $LOG
+    else
+        echo "TMRSTATE"
+        echo -e "${RED}F: $F_TMRSTATE${NC}"
+        echo -e "${RED}B: $TMRSTATE${NC}"
+        # запись в log
+        DATE_STR=$(date +"%d.%m.%Y")
+        TIME_STR=$(date +"%H:%M:%S")
+        echo "[$DATE_STR][$TIME_STR][$MODULE_NAME][Failed][Запись: ${arr[0]} TMRSTATE: FILE-$F_TMRSTATE DB-$TMRSTATE параметры не совпали]" >> $LOG
+    fi
+
+    echo "---------------------------"
+
+done
