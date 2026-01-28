@@ -12,9 +12,11 @@ echo -e "\t\e[1m3. Интервальное копирование файлов\
 echo -e "\t\e[1m4. Проверка скорости обработки файлов\e[0m"
 echo -e "\t\e[1m5. Проверка записи параметров [ACTUAL COUNTERS]\e[0m"
 echo -e "\t\e[1m6. Проверка записи архива событий [ARCHIVE4]\e[0m"
-echo -e "\t\e[1m7. Выход\e[0m"
+echo -e "\t\e[1m7. Проверка записи часового архива [ARCHIVE3]\e[0m"
+echo -e "\t\e[1m8. Проверка записи архива телеметрии [ARCHIVE9]\e[0m"
+echo -e "\t\e[1m9. Выход\e[0m"
 echo ""
-read -p "Введите номер опции (1-7): " choice
+read -p "Введите номер опции (1-9): " choice
 
 case $choice in
     1)
@@ -36,6 +38,12 @@ case $choice in
     $ACTIVE_DIR/ChecARCHIVE4.sh
     ;;
     7)
+    $ACTIVE_DIR/ChecARCHIVE3.sh
+    ;;
+    8)
+    $ACTIVE_DIR/ChecARCHIVE9.sh
+    ;;
+    9)
     echo ""
     echo ""
     clear

@@ -156,7 +156,7 @@ echo "" >> $LOG
 echo -e "Успешный тест: [Passed] \tТест провален: [Failed]" >> $LOG
 echo "" >> $LOG
 
-ARCHIVE3=$(cat $TARGET | awk '/\[ARCHIVE3\]/{f=2} f && /#/ {f=0; print; next} f' | sed '1d;$d' | sed '/ARCHIVE/d' | sed '/#/d')
+ARCHIVE3=$(cat $TARGET | awk '/\[ARCHIVE3\]/{f=2} f && /#/ {f=0; print; next} f' | sed '/ARCHIVE/d' | sed '/#/d')
 
 
 if [[ -z "$ARCHIVE3" ]]; then
@@ -254,9 +254,10 @@ for ((i=1; i<=$arcnums; i++)); do
                 F_VSUND=0
             fi
         F_SENSORSTATE=$(printf "%d" 0x"${arr[13]}" 2>/dev/null)
-        F_VALVESTATE=${arr[15]}
+        F_VALVESTATE=$(echo "${arr[15]}")
         F_BATTERY_PERCENT=${arr[16]}
         F_BATTERY_PERCENT_INPUT=${arr[17]}
+
 
     #    [0] 	arcnum
     #    [1] 	devdate
@@ -498,6 +499,7 @@ for ((i=1; i<=$arcnums; i++)); do
             echo "[$DATE_STR][$TIME_STR][$MODULE_NAME][Failed][Запись: ${arr[0]} VALVESTATE: FILE ==> $F_VALVESTATE DB ==> $VALVESTATE параметры не совпали]" >> $LOG
         fi
 
+    if [ -n "$F_BATTERY_PERCENT" ]; then
         sleep 0.03
         if echo "$F_BATTERY_PERCENT" | grep -wq "$BATTERY_PERCENT"; then
             echo "BATTERY_PERCENT"
@@ -516,8 +518,10 @@ for ((i=1; i<=$arcnums; i++)); do
             TIME_STR=$(date +"%H:%M:%S")
             echo "[$DATE_STR][$TIME_STR][$MODULE_NAME][Failed][Запись: ${arr[0]} BATTERY_PERCENT: FILE ==> $F_BATTERY_PERCENT DB ==> $BATTERY_PERCENT параметры не совпали]" >> $LOG
         fi
+    fi
 
-        sleep 0.03
+    if [ -n "$F_BATTERY_PERCENT_INPUT" ]; then
+           sleep 0.03
         if echo "$F_BATTERY_PERCENT_INPUT" | grep -wq "$BATTERY_PERCENT_INPUT"; then
             echo "BATTERY_PERCENT_INPUT"
             echo -e "${GREEN}F: $F_BATTERY_PERCENT_INPUT${NC}"
@@ -535,9 +539,90 @@ for ((i=1; i<=$arcnums; i++)); do
             TIME_STR=$(date +"%H:%M:%S")
             echo "[$DATE_STR][$TIME_STR][$MODULE_NAME][Failed][Запись: ${arr[0]} BATTERY_PERCENT_INPUT: FILE ==> $F_BATTERY_PERCENT_INPUT DB ==> $BATTERY_PERCENT_INPUT параметры не совпали]" >> $LOG
         fi
+    fi
 
-        echo "---------------------------"
+    echo "---------------------------"
 
 
 
 done
+
+# Отчёт о тесте
+Passed=$(tac $LOG | sed -n '1,/'$NAME_FILE'/p' | grep "Passed" | wc -l)
+((Passed--))
+Failed=$(tac $LOG | sed -n '1,/'$NAME_FILE'/p' | grep "Failed" | wc -l)
+((Failed--))
+echo ""
+echo -e "\t\e[1mУспешных тестов: $Passed \tПроваленых тестов: $Failed\e[0m"
+echo "" >> $LOG
+echo -e "Успешных тестов: $Passed \tПроваленых тестов: $Failed" >> $LOG
+
+
+if [[ "$Failed" > 0 ]]; then
+    echo ""
+    echo ""
+    echo -e "\t----------------------------"
+    echo -e "\t\e[1m1. Вывести ошибки из лога\e[0m"
+    echo -e "\t\e[1m2. Вывести весь лог\e[0m"
+    echo -e "\t\e[1m3. Главное меню\e[0m"
+    echo -e "\t\e[1m4. Выход\e[0m"
+    echo ""
+    read -p "Введите номер опции (1-4): " choice
+
+    case $choice in
+        1)
+        echo ""
+        tac $LOG | sed -n '1,/'$NAME_FILE'/p' | grep "Failed" | tac | sed '/Passed/d'
+        ;;
+        2)
+        echo ""
+        tac $LOG | sed -n '1,/'$NAME_FILE'/p' | tac
+        ;;
+        3)
+        $ACTIVE_DIR/Menu_v0.1.sh
+        ;;
+        4)
+        echo ""
+        echo ""
+        echo "Завершение работы."
+        exit 0
+        ;;
+        *)
+        echo ""
+        echo ""
+        echo "Ошибка: Неправильный ввод."
+        ;;
+    esac
+fi
+
+if [[ "$Failed" == 0 ]]; then
+    echo ""
+    echo ""
+    echo -e "\t----------------------------"
+    echo -e "\t\e[1m1. Вывести весь лог\e[0m"
+    echo -e "\t\e[1m2. Главное меню\e[0m"
+    echo -e "\t\e[1m3. Выход\e[0m"
+    echo ""
+    read -p "Введите номер опции (1-3): " choice
+
+    case $choice in
+        1)
+        echo ""
+        tac $LOG | sed -n '1,/'$NAME_FILE'/p' | tac
+        ;;
+        2)
+        $ACTIVE_DIR/Menu_v0.1.sh
+        ;;
+        3)
+        echo ""
+        echo ""
+        echo "Завершение работы."
+        exit 0
+        ;;
+        *)
+        echo ""
+        echo ""
+        echo "Ошибка: Неправильный ввод."
+        ;;
+    esac
+fi

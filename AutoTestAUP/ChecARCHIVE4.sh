@@ -201,7 +201,7 @@ for ((i=1; i<=$arcnums; i++)); do
             # запись в log
             DATE_STR=$(date +"%d.%m.%Y")
             TIME_STR=$(date +"%H:%M:%S")
-            echo "[$DATE_STR][$TIME_STR][$MODULE_NAME][Passed][Запись: ${arr[0]} DEV_DATE_END: FILE ==> $F_DEV_DATE_END DB: $DEV_DATE_END параметры совпали]" >> $LOG
+            echo "[$DATE_STR][$TIME_STR][$MODULE_NAME][Passed][Запись: ${arr[0]} DEV_DATE_END: FILE ==> $F_DEV_DATE_END DB ==> $DEV_DATE_END параметры совпали]" >> $LOG
         else
             echo "DEV_DATE_END"
             echo -e "${RED}F: $F_DEV_DATE_END${NC}"
@@ -209,7 +209,7 @@ for ((i=1; i<=$arcnums; i++)); do
             # запись в log
             DATE_STR=$(date +"%d.%m.%Y")
             TIME_STR=$(date +"%H:%M:%S")
-            echo "[$DATE_STR][$TIME_STR][$MODULE_NAME][Failed][Запись: ${arr[0]} DEV_DATE_END: FILE ==> $F_DEV_DATE_END DB: $DEV_DATE_END параметры не совпали]" >> $LOG
+            echo "[$DATE_STR][$TIME_STR][$MODULE_NAME][Failed][Запись: ${arr[0]} DEV_DATE_END: FILE ==> $F_DEV_DATE_END DB ==> $DEV_DATE_END параметры не совпали]" >> $LOG
         fi
 
         sleep 0.05
@@ -220,7 +220,7 @@ for ((i=1; i<=$arcnums; i++)); do
             # запись в log
             DATE_STR=$(date +"%d.%m.%Y")
             TIME_STR=$(date +"%H:%M:%S")
-            echo "[$DATE_STR][$TIME_STR][$MODULE_NAME][Passed][Запись: ${arr[0]} SEANCE_NUM ==> FILE: $F_SEANCE_NUM DB: $SEANCE_NUM параметры совпали]" >> $LOG
+            echo "[$DATE_STR][$TIME_STR][$MODULE_NAME][Passed][Запись: ${arr[0]} SEANCE_NUM ==> FILE: $F_SEANCE_NUM DB ==> $SEANCE_NUM параметры совпали]" >> $LOG
         else
             echo "SEANCE_NUM"
             echo -e "${RED}F: $F_SEANCE_NUM${NC}"
@@ -228,7 +228,7 @@ for ((i=1; i<=$arcnums; i++)); do
             # запись в log
             DATE_STR=$(date +"%d.%m.%Y")
             TIME_STR=$(date +"%H:%M:%S")
-            echo "[$DATE_STR][$TIME_STR][$MODULE_NAME][Failed][Запись: ${arr[0]} SEANCE_NUM ==> FILE: $F_SEANCE_NUM DB: $SEANCE_NUM параметры не совпали]" >> $LOG
+            echo "[$DATE_STR][$TIME_STR][$MODULE_NAME][Failed][Запись: ${arr[0]} SEANCE_NUM ==> FILE: $F_SEANCE_NUM DB ==> $SEANCE_NUM параметры не совпали]" >> $LOG
         fi
 
         sleep 0.05
@@ -239,7 +239,7 @@ for ((i=1; i<=$arcnums; i++)); do
             # запись в log
             DATE_STR=$(date +"%d.%m.%Y")
             TIME_STR=$(date +"%H:%M:%S")
-            echo "[$DATE_STR][$TIME_STR][$MODULE_NAME][Passed][Запись: ${arr[0]} STATUS: FILE ==> $F_STATUS DB: $STATUS параметры совпали]" >> $LOG
+            echo "[$DATE_STR][$TIME_STR][$MODULE_NAME][Passed][Запись: ${arr[0]} STATUS: FILE ==> $F_STATUS DB ==> $STATUS параметры совпали]" >> $LOG
         else
             echo "STATUS"
             echo -e "${RED}F: $F_STATUS${NC}"
@@ -247,7 +247,7 @@ for ((i=1; i<=$arcnums; i++)); do
             # запись в log
             DATE_STR=$(date +"%d.%m.%Y")
             TIME_STR=$(date +"%H:%M:%S")
-            echo "[$DATE_STR][$TIME_STR][$MODULE_NAME][Failed][Запись: ${arr[0]} STATUS: FILE ==> $F_STATUS DB: $STATUS параметры не совпали]" >> $LOG
+            echo "[$DATE_STR][$TIME_STR][$MODULE_NAME][Failed][Запись: ${arr[0]} STATUS: FILE ==> $F_STATUS DB ==> $STATUS параметры не совпали]" >> $LOG
         fi
 
         sleep 0.05
@@ -258,7 +258,7 @@ for ((i=1; i<=$arcnums; i++)); do
             # запись в log
             DATE_STR=$(date +"%d.%m.%Y")
             TIME_STR=$(date +"%H:%M:%S")
-            echo "[$DATE_STR][$TIME_STR][$MODULE_NAME][Passed][Запись: ${arr[0]} TMRSTATE: FILE ==> $F_TMRSTATE DB: $TMRSTATE параметры совпали]" >> $LOG
+            echo "[$DATE_STR][$TIME_STR][$MODULE_NAME][Passed][Запись: ${arr[0]} TMRSTATE: FILE ==> $F_TMRSTATE DB ==> $TMRSTATE параметры совпали]" >> $LOG
         else
             echo "TMRSTATE"
             echo -e "${RED}F: $F_TMRSTATE${NC}"
@@ -266,7 +266,7 @@ for ((i=1; i<=$arcnums; i++)); do
             # запись в log
             DATE_STR=$(date +"%d.%m.%Y")
             TIME_STR=$(date +"%H:%M:%S")
-            echo "[$DATE_STR][$TIME_STR][$MODULE_NAME][Failed][Запись: ${arr[0]} TMRSTATE: FILE ==> $F_TMRSTATE DB: $TMRSTATE параметры не совпали]" >> $LOG
+            echo "[$DATE_STR][$TIME_STR][$MODULE_NAME][Failed][Запись: ${arr[0]} TMRSTATE: FILE ==> $F_TMRSTATE DB ==> $TMRSTATE параметры не совпали]" >> $LOG
         fi
 
         echo "---------------------------"
@@ -322,7 +322,7 @@ for ((i=1; i<=$arcnums; i++)); do
             # запись в log
             DATE_STR=$(date +"%d.%m.%Y")
             TIME_STR=$(date +"%H:%M:%S")
-            echo "[$DATE_STR][$TIME_STR][$MODULE_NAME][Passed][Запись: ${arr[0]} DATE_START ==> FILE: $F_DATE_START DB: $DATE_START параметры совпали]" >> $LOG
+            echo "[$DATE_STR][$TIME_STR][$MODULE_NAME][Passed][Запись: ${arr[0]} DATE_START ==> FILE: $F_DATE_START DB ==> $DATE_START параметры совпали]" >> $LOG
         else
             echo "DATE_START"
             echo -e "${RED}F: $F_DATE_START${NC}"
@@ -330,7 +330,7 @@ for ((i=1; i<=$arcnums; i++)); do
             # запись в log
             DATE_STR=$(date +"%d.%m.%Y")
             TIME_STR=$(date +"%H:%M:%S")
-            echo "[$DATE_STR][$TIME_STR][$MODULE_NAME][Failed][Запись: ${arr[0]} DATE_START ==> FILE: $F_DATE_START DB: $DATE_START параметры не совпали]" >> $LOG
+            echo "[$DATE_STR][$TIME_STR][$MODULE_NAME][Failed][Запись: ${arr[0]} DATE_START ==> FILE: $F_DATE_START DB ==> $DATE_START параметры не совпали]" >> $LOG
         fi
 
         sleep 0.05
@@ -341,7 +341,7 @@ for ((i=1; i<=$arcnums; i++)); do
             # запись в log
             DATE_STR=$(date +"%d.%m.%Y")
             TIME_STR=$(date +"%H:%M:%S")
-            echo "[$DATE_STR][$TIME_STR][$MODULE_NAME][Passed][Запись: ${arr[0]} DATE_END: FILE ==> $F_DATE_END DB: $DATE_END параметры совпали]" >> $LOG
+            echo "[$DATE_STR][$TIME_STR][$MODULE_NAME][Passed][Запись: ${arr[0]} DATE_END: FILE ==> $F_DATE_END DB ==> $DATE_END параметры совпали]" >> $LOG
         else
             echo "DATE_END"
             echo -e "${RED}F: $F_DATE_END${NC}"
@@ -349,7 +349,7 @@ for ((i=1; i<=$arcnums; i++)); do
             # запись в log
             DATE_STR=$(date +"%d.%m.%Y")
             TIME_STR=$(date +"%H:%M:%S")
-            echo "[$DATE_STR][$TIME_STR][$MODULE_NAME][Failed][Запись: ${arr[0]} DATE_END: FILE ==> $F_DATE_END DB: $DATE_END параметры не совпали]" >> $LOG
+            echo "[$DATE_STR][$TIME_STR][$MODULE_NAME][Failed][Запись: ${arr[0]} DATE_END: FILE ==> $F_DATE_END DB ==> $DATE_END параметры не совпали]" >> $LOG
         fi
 
         sleep 0.05
@@ -360,7 +360,7 @@ for ((i=1; i<=$arcnums; i++)); do
             # запись в log
             DATE_STR=$(date +"%d.%m.%Y")
             TIME_STR=$(date +"%H:%M:%S")
-            echo "[$DATE_STR][$TIME_STR][$MODULE_NAME][Passed][Запись: ${arr[0]} SEANCE_NUM: FILE ==> $F_SEANCE_NUM DB: $SEANCE_NUM параметры совпали]" >> $LOG
+            echo "[$DATE_STR][$TIME_STR][$MODULE_NAME][Passed][Запись: ${arr[0]} SEANCE_NUM: FILE ==> $F_SEANCE_NUM DB ==> $SEANCE_NUM параметры совпали]" >> $LOG
         else
             echo "SEANCE_NUM"
             echo -e "${RED}F: $F_SEANCE_NUM${NC}"
@@ -368,7 +368,7 @@ for ((i=1; i<=$arcnums; i++)); do
             # запись в log
             DATE_STR=$(date +"%d.%m.%Y")
             TIME_STR=$(date +"%H:%M:%S")
-            echo "[$DATE_STR][$TIME_STR][$MODULE_NAME][Failed][Запись: ${arr[0]} SEANCE_NUM: FILE ==> $F_SEANCE_NUM DB: $SEANCE_NUM параметры не совпали]" >> $LOG
+            echo "[$DATE_STR][$TIME_STR][$MODULE_NAME][Failed][Запись: ${arr[0]} SEANCE_NUM: FILE ==> $F_SEANCE_NUM DB ==> $SEANCE_NUM параметры не совпали]" >> $LOG
         fi
 
         sleep 0.05
@@ -379,7 +379,7 @@ for ((i=1; i<=$arcnums; i++)); do
             # запись в log
             DATE_STR=$(date +"%d.%m.%Y")
             TIME_STR=$(date +"%H:%M:%S")
-            echo "[$DATE_STR][$TIME_STR][$MODULE_NAME][Passed][Запись: ${arr[0]} ERROR_CODE: FILE ==> $F_ERROR_CODE DB: $ERROR_CODE параметры совпали]" >> $LOG
+            echo "[$DATE_STR][$TIME_STR][$MODULE_NAME][Passed][Запись: ${arr[0]} ERROR_CODE: FILE ==> $F_ERROR_CODE DB ==> $ERROR_CODE параметры совпали]" >> $LOG
         else
             echo "ERROR_CODE"
             echo -e "${RED}F: $F_ERROR_CODE${NC}"
@@ -387,7 +387,7 @@ for ((i=1; i<=$arcnums; i++)); do
             # запись в log
             DATE_STR=$(date +"%d.%m.%Y")
             TIME_STR=$(date +"%H:%M:%S")
-            echo "[$DATE_STR][$TIME_STR][$MODULE_NAME][Failed][Запись: ${arr[0]} ERROR_CODE: FILE ==> $F_ERROR_CODE DB: $ERROR_CODE параметры не совпали]" >> $LOG
+            echo "[$DATE_STR][$TIME_STR][$MODULE_NAME][Failed][Запись: ${arr[0]} ERROR_CODE: FILE ==> $F_ERROR_CODE DB ==> $ERROR_CODE параметры не совпали]" >> $LOG
         fi
 
         sleep 0.05
@@ -398,7 +398,7 @@ for ((i=1; i<=$arcnums; i++)); do
             # запись в log
             DATE_STR=$(date +"%d.%m.%Y")
             TIME_STR=$(date +"%H:%M:%S")
-            echo "[$DATE_STR][$TIME_STR][$MODULE_NAME][Passed][Запись: ${arr[0]} TMRSTATE: FILE ==> $F_TMRSTATE DB: $TMRSTATE параметры совпали]" >> $LOG
+            echo "[$DATE_STR][$TIME_STR][$MODULE_NAME][Passed][Запись: ${arr[0]} TMRSTATE: FILE ==> $F_TMRSTATE DB ==> $TMRSTATE параметры совпали]" >> $LOG
         else
             echo "TMRSTATE"
             echo -e "${RED}F: $F_TMRSTATE${NC}"
@@ -406,7 +406,7 @@ for ((i=1; i<=$arcnums; i++)); do
             # запись в log
             DATE_STR=$(date +"%d.%m.%Y")
             TIME_STR=$(date +"%H:%M:%S")
-            echo "[$DATE_STR][$TIME_STR][$MODULE_NAME][Failed][Запись: ${arr[0]} TMRSTATE: FILE ==> $F_TMRSTATE DB: $TMRSTATE параметры не совпали]" >> $LOG
+            echo "[$DATE_STR][$TIME_STR][$MODULE_NAME][Failed][Запись: ${arr[0]} TMRSTATE: FILE ==> $F_TMRSTATE DB ==> $TMRSTATE параметры не совпали]" >> $LOG
         fi
 
         echo "---------------------------"
@@ -414,3 +414,83 @@ for ((i=1; i<=$arcnums; i++)); do
     fi
 
 done
+
+# Отчёт о тесте
+Passed=$(tac $LOG | sed -n '1,/'$NAME_FILE'/p' | grep "Passed" | wc -l)
+((Passed--))
+Failed=$(tac $LOG | sed -n '1,/'$NAME_FILE'/p' | grep "Failed" | wc -l)
+((Failed--))
+echo ""
+echo -e "\t\e[1mУспешных тестов: $Passed \tПроваленых тестов: $Failed\e[0m"
+echo "" >> $LOG
+echo -e "Успешных тестов: $Passed \tПроваленых тестов: $Failed" >> $LOG
+
+
+if [[ "$Failed" > 0 ]]; then
+    echo ""
+    echo ""
+    echo -e "\t----------------------------"
+    echo -e "\t\e[1m1. Вывести ошибки из лога\e[0m"
+    echo -e "\t\e[1m2. Вывести весь лог\e[0m"
+    echo -e "\t\e[1m3. Главное меню\e[0m"
+    echo -e "\t\e[1m4. Выход\e[0m"
+    echo ""
+    read -p "Введите номер опции (1-4): " choice
+
+    case $choice in
+        1)
+        echo ""
+        tac $LOG | sed -n '1,/'$NAME_FILE'/p' | grep "Failed" | tac | sed '/Passed/d'
+        ;;
+        2)
+        echo ""
+        tac $LOG | sed -n '1,/'$NAME_FILE'/p' | tac
+        ;;
+        3)
+        $ACTIVE_DIR/Menu_v0.1.sh
+        ;;
+        4)
+        echo ""
+        echo ""
+        echo "Завершение работы."
+        exit 0
+        ;;
+        *)
+        echo ""
+        echo ""
+        echo "Ошибка: Неправильный ввод."
+        ;;
+    esac
+fi
+
+if [[ "$Failed" == 0 ]]; then
+    echo ""
+    echo ""
+    echo -e "\t----------------------------"
+    echo -e "\t\e[1m1. Вывести весь лог\e[0m"
+    echo -e "\t\e[1m2. Главное меню\e[0m"
+    echo -e "\t\e[1m3. Выход\e[0m"
+    echo ""
+    read -p "Введите номер опции (1-3): " choice
+
+    case $choice in
+        1)
+        echo ""
+        tac $LOG | sed -n '1,/'$NAME_FILE'/p' | tac
+        ;;
+        2)
+        $ACTIVE_DIR/Menu_v0.1.sh
+        ;;
+        3)
+        echo ""
+        echo ""
+        echo "Завершение работы."
+        exit 0
+        ;;
+        *)
+        echo ""
+        echo ""
+        echo "Ошибка: Неправильный ввод."
+        ;;
+    esac
+fi
