@@ -322,7 +322,7 @@ for ((i=1; i<=$arcnums; i++)); do
             # запись в log
             DATE_STR=$(date +"%d.%m.%Y")
             TIME_STR=$(date +"%H:%M:%S")
-            echo "[$DATE_STR][$TIME_STR][$MODULE_NAME][Passed][Запись: ${arr[0]} DATE_START ==> FILE: $F_DATE_START DB ==> $DATE_START параметры совпали]" >> $LOG
+            echo "[$DATE_STR][$TIME_STR][$MODULE_NAME][Passed][Запись: ${arr[0]} DATE_START: FILE ==> $F_DATE_START DB ==> $DATE_START параметры совпали]" >> $LOG
         else
             echo "DATE_START"
             echo -e "${RED}F: $F_DATE_START${NC}"
@@ -330,7 +330,7 @@ for ((i=1; i<=$arcnums; i++)); do
             # запись в log
             DATE_STR=$(date +"%d.%m.%Y")
             TIME_STR=$(date +"%H:%M:%S")
-            echo "[$DATE_STR][$TIME_STR][$MODULE_NAME][Failed][Запись: ${arr[0]} DATE_START ==> FILE: $F_DATE_START DB ==> $DATE_START параметры не совпали]" >> $LOG
+            echo "[$DATE_STR][$TIME_STR][$MODULE_NAME][Failed][Запись: ${arr[0]} DATE_START: FILE ==> $F_DATE_START DB ==> $DATE_START параметры не совпали]" >> $LOG
         fi
 
         sleep 0.05

@@ -254,9 +254,9 @@ for ((i=1; i<=$arcnums; i++)); do
                 F_VSUND=0
             fi
         F_SENSORSTATE=$(printf "%d" 0x"${arr[13]}" 2>/dev/null)
-        F_VALVESTATE=$(echo "${arr[15]}")
+        F_VALVESTATE=$(echo "${arr[15]}" | grep -oE '[0-9]+')
         F_BATTERY_PERCENT=${arr[16]}
-        F_BATTERY_PERCENT_INPUT=${arr[17]}
+        F_BATTERY_PERCENT_INPUT=$(echo "${arr[17]}" | grep -oE '[0-9]+')
 
 
     #    [0] 	arcnum
