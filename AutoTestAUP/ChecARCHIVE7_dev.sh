@@ -111,14 +111,7 @@ done
  clear
 # КОНЕЦ МЕНЮ ВЫБОРА ФАЙЛА
 
-P_NAME_FILE=$(echo "$NAME_FILE" | grep -o "_" | wc -l)
-if [ $P_NAME_FILE == 3 ]; then
-    devnum=$(echo "${NAME_FILE#*_}")
-    devnum=$(echo "${devnum#*_}")
-    devnum=$(echo "${devnum%_*}")
-else
-    devnum=$(echo "$NAME_FILE" | sed 's/.*_//' | cut -d'.' -f1)
-fi
+devnum=$(echo "$NAME_FILE" | sed 's/.*_//' | cut -d'.' -f1)
 
 export PGPASSWORD=$Password
 device_id=$(psql -U $Login -h $Host -p $Port -d $Name -tA -c "select id from devices_custs.device
@@ -193,7 +186,7 @@ for ((i=1; i<=$arcnums; i++)); do
         IFS=';' read -r -a ac <<< "$ACTUAL_COUNTERS" # Преобразует строку в массив 'ac'
 
         VOLUME_PULSE=$(echo "scale=4; 1 / ${ac[1]}" | bc)
-        VOLUME_PULSE=0${VOLUME_PULSE}
+        VOLUME_PULSE=0$VOLUME_PULSE
        # if [[ $(echo "$DB_VOLUME_PULSE == 0.001 && $VOLUME_PULSE == 0.0010" | bc) -eq 1 ]]; then
        #     DB_VOLUME_PULSE=0.0010
        # fi
@@ -243,7 +236,6 @@ for ((i=1; i<=$arcnums; i++)); do
             if [ -z "$F_VSTOT" ]; then
                 F_VSTOT=0
             fi
-
         F_T=${arr[3]}
         F_T_OUT=${arr[4]}
         F_K=${arr[5]}
@@ -251,8 +243,7 @@ for ((i=1; i<=$arcnums; i++)); do
         F_WARNINGSTATE=$(printf "%d" 0x"${arr[7]}" 2>/dev/null)
         F_CRASHSTATE=$(printf "%d" 0x"${arr[9]}" 2>/dev/null)
         F_EVENTCODE=$(printf "%d" 0x"${arr[10]}" 2>/dev/null)
-        F_VSUND=$(echo "${arr[12]}" | grep -oE '[0-9]+')
-        F_VSUND=$(echo "scale=4; $F_VSUND * $VOLUME_PULSE" | bc)
+        F_VSUND=$(echo "scale=4; ${arr[12]} * $VOLUME_PULSE" | bc)
             if [[ "$F_VSUND" == *0 ]]; then
                 F_VSUND=$(echo "$F_VSUND" | sed 's/0*$//')
             fi
@@ -262,17 +253,8 @@ for ((i=1; i<=$arcnums; i++)); do
             if [ -z "$F_VSUND" ]; then
                 F_VSUND=0
             fi
-
-        F_SENSORSTATE=${arr[13]}
-        if [ -z "$F_SENSORSTATE" ]; then
-            F_SENSORSTATE="null"
-        else
-            F_SENSORSTATE=$(printf "%d" 0x"${arr[13]}" 2>/dev/null)
-        fi
+        F_SENSORSTATE=$(printf "%d" 0x"${arr[13]}" 2>/dev/null)
         F_VALVESTATE=$(echo "${arr[15]}" | grep -oE '[0-9]+')
-        if [ -z "$F_VALVESTATE" ]; then
-            F_VALVESTATE="null"
-        fi
         F_BATTERY_PERCENT=${arr[16]}
         F_BATTERY_PERCENT_INPUT=$(echo "${arr[17]}" | grep -oE '[0-9]+')
 

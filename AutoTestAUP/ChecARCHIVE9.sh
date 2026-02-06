@@ -112,7 +112,14 @@ done
  clear
 # КОНЕЦ МЕНЮ ВЫБОРА ФАЙЛА
 
-devnum=$(echo "$NAME_FILE" | sed 's/.*_//' | cut -d'.' -f1)
+P_NAME_FILE=$(echo "$NAME_FILE" | grep -o "_" | wc -l)
+if [ $P_NAME_FILE == 3 ]; then
+    devnum=$(echo "${NAME_FILE#*_}")
+    devnum=$(echo "${devnum#*_}")
+    devnum=$(echo "${devnum%_*}")
+else
+    devnum=$(echo "$NAME_FILE" | sed 's/.*_//' | cut -d'.' -f1)
+fi
 
 export PGPASSWORD=$Password
 device_id=$(psql -U $Login -h $Host -p $Port -d $Name -tA -c "select id from devices_custs.device
