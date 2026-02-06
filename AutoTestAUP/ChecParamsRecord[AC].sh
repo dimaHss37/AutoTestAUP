@@ -2647,8 +2647,8 @@ export PGPASSWORD=$Password
 DB_STATUS_RS485=$(psql -U $Login -h $Host -p $Port -d $Name -tA -c "select value from info_params.device_info_params
 where device_id=$id and attribute_id=2679;")
 unset PGPASSWORD
-STATUS_RS485=${arr[$i]}
-STR1="STATUS_RS485: ${arr[$i]}"
+STATUS_RS485=$(echo "${arr[$i]}" | grep -oE '[0-9]+')
+STR1="STATUS_RS485: $STATUS_RS485"
 STR2="STATUS_RS485: $DB_STATUS_RS485"
 sleep 0.2
 if echo "$STR1" | grep -wq "$STR2"; then
