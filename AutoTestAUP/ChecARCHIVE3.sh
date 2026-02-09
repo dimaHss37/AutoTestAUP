@@ -250,7 +250,8 @@ for ((i=1; i<=$arcnums; i++)); do
         F_TMRSTATE=$(printf "%d" 0x"${arr[6]}" 2>/dev/null)
         F_WARNINGSTATE=$(printf "%d" 0x"${arr[7]}" 2>/dev/null)
         F_CRASHSTATE=$(printf "%d" 0x"${arr[9]}" 2>/dev/null)
-        F_EVENTCODE=$(printf "%d" 0x"${arr[10]}" 2>/dev/null)
+        #F_EVENTCODE=$(printf "%d" 0x"${arr[10]}" 2>/dev/null)
+        F_EVENTCODE=$((16#${arr[10]}))
         F_VSUND=$(echo "${arr[12]}" | grep -oE '[0-9]+')
         F_VSUND=$(echo "scale=4; $F_VSUND * $VOLUME_PULSE" | bc)
             if [[ "$F_VSUND" == *0 ]]; then

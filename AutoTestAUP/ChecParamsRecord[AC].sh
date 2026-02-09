@@ -151,6 +151,13 @@ fi
 
 # ПРЕДЛОЖЕНИЕ ПЕРЕЗАПИСАТЬ ФАЙЛ В БД
 ACTUAL_COUNTERS=$(tac $TARGET | grep -m 1 "ACTUAL COUNTERS" -a1 | head -n 1)
+if [ -z "$ACTUAL_COUNTERS" ]; then
+    echo ""
+    echo -e "\t${RED}В файле $NAME_FILE нет секции [ACTUAL COUNTERS].${NC}"
+    $ACTIVE_DIR/MenuAC.sh
+    exit 0
+fi
+
 IFS=';' read -r -a arr1 <<< "$ACTUAL_COUNTERS" # Преобразует строку в массив 'arr'
 export PGPASSWORD=$Password
 DB_DATETIME=$(psql -U $Login -d $Name -h $Host -p $Port -tA -c "select value from info_params.device_info_params
@@ -247,7 +254,6 @@ SMT_numbs="99 96 9 82 81 80 8 79 78 77 76 75 74 73 72 71 7 68 67 66 65 64 6 53 5
 2032 2031 2030 2029 2017 2016 2015 2014 2013 17 16 15 14 13 1098 1097 1095 1084 1083 1070
 1069 1033 1032 1031 1030 1029 1017 1016 1015 1014 1013"
 
-#if echo "$SMT_numbs" | grep -wq "$TYPE"; then
 if ! grep -q "$TYPE" <<< "$SMT_numbs"; then
     echo ""
     echo -e "\t${RED}Данный тип прибора не поддерживается.${NC}"
@@ -572,9 +578,8 @@ export PGPASSWORD=$Password
 DB_DATETIME=$(psql -U $Login -d $Name -h $Host -p $Port -tA -c "select value from info_params.device_info_params
 where device_id=$id and attribute_id=33;")
 unset PGPASSWORD
-DATETIME=${arr[$i]}
-STR1="DATETIME: ${arr[$i]}"
-STR1=$(echo "$STR1" | awk -F'.' '{print $1"."$2".20"$3""$4}' | sed 's/,/ /g')
+DATETIME=$(echo "${arr[$i]}" | awk -F'.' '{print $1"."$2".20"$3""$4}' | sed 's/,/ /g')
+STR1="DATETIME: $DATETIME"
 STR2="DATETIME: $DB_DATETIME"
 sleep 0.1
 if echo "$STR1" | grep -wq "$STR2"; then
@@ -1014,7 +1019,7 @@ fi
 # 14 RESERVE_INTERVAL   //RESERVED_INT
 if [ -z "$SIM_ACTIV" ]; then
     export PGPASSWORD=$Password
-    DB_MODE_TRANSFER=$(psql -U $Login -h $Host -p $Port -d $Name -tA -c "select value from info_params.device_info_params
+    DB_RESERVE_INTERVAL=$(psql -U $Login -h $Host -p $Port -d $Name -tA -c "select value from info_params.device_info_params
     where device_id=$id and attribute_id=99;")
     unset PGPASSWORD
 else
@@ -1626,6 +1631,19 @@ export PGPASSWORD=$Password
 DB_VALVESTATE=$(psql -U $Login -h $Host -p $Port -d $Name -tA -c "select value from info_params.device_info_params
 where device_id=$id and attribute_id=72;")
 unset PGPASSWORD
+if [ -z "$DB_VALVESTATE" ]; then
+    export PGPASSWORD=$Password
+    flow_id=$(psql -U $Login -h $Host -p $Port -d $Name -tA -c "select id from devices_custs.flow
+    where device_id = $id;")
+    unset PGPASSWORD
+    export PGPASSWORD=$Password
+    arcdata=$(psql -U $Login -h $Host -p $Port -d $Name -tA -c "select arcdata from archives.intarc
+    where flow_id = $flow_id
+    order by arcnum desc
+    LIMIT 1;")
+    unset PGPASSWORD
+    DB_VALVESTATE=$(echo "$arcdata" | jq -r '.VALVESTATE')
+fi
 VALVESTATE=${arr[$i]}
 STR1="VALVESTATE: ${arr[$i]}"
 STR2="VALVESTATE: $DB_VALVESTATE"
@@ -2561,12 +2579,24 @@ else
 fi
 
 # 47 LASTVSDIST     //CURRENT_COUNTER_DISC (uint64) - м3*10000 - накопленный возмущённый объём.
-# Значение надо посчтиать по формуле CURRENT_COUNTER_DISC*VOLUME_PULSE
+# Значение надо посчтиать по формуле CURRENT_COUNTER_DISC * VOLUME_PULSE
 # export PGPASSWORD=$Password
 #DB_LASTVSDIST=$(psql -U $Login -h $Host -p $Port -d $Name -tA -c "select value from info_params.device_info_params
 #where device_id=$id and attribute_id=2678;")
 # unset PGPASSWORD
+export PGPASSWORD=$Password
+flow_id=$(psql -U $Login -h $Host -p $Port -d $Name -tA -c "select id from devices_custs.flow
+where device_id = $id;")
+unset PGPASSWORD
+export PGPASSWORD=$Password
+arcdata=$(psql -U $Login -h $Host -p $Port -d $Name -tA -c "select arcdata from archives.intarc
+where flow_id = $flow_id
+order by arcnum desc
+LIMIT 1;")
+unset PGPASSWORD
+DB_LASTVSDIST=$(echo "$arcdata" | jq -r '.VSDIST')
 LASTVSDIST=${arr[$i]}
+#LASTVSDIST=$(echo "scale=4; ${arr[$i]} * $VOLUME_PULSE" | bc)
 STR1="LASTVSDIST: ${arr[$i]}"
 STR2="LASTVSDIST: $DB_LASTVSDIST"
 sleep 0.2
@@ -2834,8 +2864,8 @@ export PGPASSWORD=$Password
 DB_TEMP_BOARD=$(psql -U $Login -h $Host -p $Port -d $Name -tA -c "select value from info_params.device_info_params
 where device_id=$id and attribute_id=2682;")
 unset PGPASSWORD
-TEMP_BOARD=${arr[$i]}
-STR1="TEMP_BOARD: ${arr[$i]}"
+TEMP_BOARD=$(echo "${arr[$i]}" | grep -oE '[0-9]*\.?[0-9]+')
+STR1="TEMP_BOARD: $TEMP_BOARD"
 STR2="TEMP_BOARD: $DB_TEMP_BOARD"
 sleep 0.2
 if echo "$STR1" | grep -wq "$STR2"; then

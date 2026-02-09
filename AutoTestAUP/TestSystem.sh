@@ -161,7 +161,7 @@ echo ""
 
 # Проверяем подключение к БД
     #проеряем работает ли AUP-DbWriterService.service и нашёлся ли лог, если нет то выводим сообщение о том что нет инф. о подключении
-if [[ "$STATUS_DBS" = "activating" || -z "$FILE_LOG_DbWriterService" ]]; then
+if [[ "$STATUS_DBS" = "activating" && -z "$FILE_LOG_DbWriterService" ]]; then
     DATE_STR=$(date +"%d.%m.%Y")
     TIME_STR=$(date +"%H:%M:%S")
     echo "[$DATE_STR][$TIME_STR][$MODULE_NAME][Нет информации о подключении к БД.]" >> $LOG

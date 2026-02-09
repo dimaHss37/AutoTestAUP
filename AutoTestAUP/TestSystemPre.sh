@@ -11,6 +11,8 @@
     #ищем sgs.json
     FILE_SGS_JSON=$(find /opt -type f -name "sgs.json" 2>/dev/null)
     ACTIVE_DIR=$(dirname "$0")
+    #принудительно создаём директори
+    mkdir $ACTIVE_DIR/Log 2>/dev/null
     #формируем имя и путь лог файла
     F_LOG="/Log/CopyRandomFile_$DATE_STR.log"
     LOG="$ACTIVE_DIR$F_LOG"

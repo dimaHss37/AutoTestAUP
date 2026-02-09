@@ -18,7 +18,7 @@ $ACTIVE_DIR/TestSystemPre.sh
     F_LOG="/Log/CopyRandomFile_$DATE_STR.log"
     LOG="$ACTIVE_DIR$F_LOG"
     # Папка, откуда берем файлы
-    SOURCE_DIR="/home/user/rdt"
+    SOURCE_DIR="/media/sf_/RDT"
 
     
 #индекс цыкла
