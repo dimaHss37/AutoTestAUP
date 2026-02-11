@@ -26,7 +26,7 @@ case $choice in
     $ACTIVE_DIR/TestSystem.sh
     ;;
     3)
-    $ACTIVE_DIR/CopyRandomFile_v0.3a.sh
+    $ACTIVE_DIR/CopyRandomFile_v1.0.sh
     ;;
     4)
     $ACTIVE_DIR/TimeMetr.sh
