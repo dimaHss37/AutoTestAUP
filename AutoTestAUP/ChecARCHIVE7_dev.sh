@@ -4,11 +4,11 @@ ACTIVE_DIR=$(dirname "$0")
 
 mkdir $ACTIVE_DIR/Log 2>/dev/null
 # назватие модуля
-MODULE_NAME="ChecARCHIVE3"
+MODULE_NAME="ChecARCHIVE7"
 # получаем текущую дату
 DATE_STR=$(date +"%d_%m_%Y")
 # формируем имя и путь лог файла
-F_LOG="/Log/ChecARCHIVE3_$DATE_STR.log"
+F_LOG="/Log/ChecARCHIVE7_$DATE_STR.log"
 LOG="$ACTIVE_DIR$F_LOG"
 
 
@@ -156,17 +156,17 @@ echo "" >> $LOG
 echo -e "Успешный тест: [Passed] \tТест провален: [Failed]" >> $LOG
 echo "" >> $LOG
 
-ARCHIVE3=$(cat $TARGET | awk '/\[ARCHIVE3\]/{f=2} f && /#/ {f=0; print; next} f' | sed '/ARCHIVE/d' | sed '/#/d')
+ARCHIVE7=$(cat $TARGET | awk '/\[ARCHIVE7\]/{f=2} f && /#/ {f=0; print; next} f' | sed '/ARCHIVE/d' | sed '/#/d')
 
 
-if [[ -z "$ARCHIVE3" ]]; then
-    echo "В файле: $NAME_FILE нет часового архива"
+if [[ -z "$ARCHIVE7" ]]; then
+    echo "В файле: $NAME_FILE нет суточеого архива"
     echo ""
-    echo "[$DATE_STR][$TIME_STR][$MODULE_NAME][В файле: $NAME_FILE нет часового архива]" >> $LOG
+    echo "[$DATE_STR][$TIME_STR][$MODULE_NAME][В файле: $NAME_FILE нет суточеого архива]" >> $LOG
     exit 0
 fi
 
-arcnums=$(echo "$ARCHIVE3" | wc -l)
+arcnums=$(echo "$ARCHIVE7" | wc -l)
 
 # запись в log
 DATE_STR=$(date +"%d.%m.%Y")
@@ -175,7 +175,7 @@ echo "[$DATE_STR][$TIME_STR][$MODULE_NAME][Количество записей: 
 
 for ((i=1; i<=$arcnums; i++)); do
     ind="NR==$i"
-    line=$(echo "$ARCHIVE3" | awk $ind)
+    line=$(echo "$ARCHIVE7" | awk $ind)
     values=$(echo "$line" | grep -o ";" | wc -l)
     values=$((values + 1))
 
@@ -194,13 +194,13 @@ for ((i=1; i<=$arcnums; i++)); do
 
         export PGPASSWORD=$Password
         devdate=$(psql -U $Login -h $Host -d $Name -p $Port -tA -c "SELECT devdate FROM archives.intarc
-        where flow_id = $flow_id and arcnum = ${arr[0]};")
+        where flow_id = $flow_id and inttype = 2 and arcnum = ${arr[0]};")
         unset PGPASSWORD
         devdate=$(date -d "$devdate" +"%d.%m.%Y %H:%M:%S")
 
         export PGPASSWORD=$Password
         arcdata=$(psql -U $Login -h $Host -d $Name -p $Port -tA -c "SELECT arcdata FROM archives.intarc
-        where flow_id = $flow_id and arcnum = ${arr[0]};")
+        where flow_id = $flow_id and inttype = 2 and arcnum = ${arr[0]};")
         unset PGPASSWORD
 
         VSTOT=$(echo "$arcdata" | jq -r '.VSTOT')
@@ -208,12 +208,11 @@ for ((i=1; i<=$arcnums; i++)); do
         if [[ $T =~ ^[0-9]+\.[0-9]$ ]]; then
                 T=$(echo "${T}0")
         fi
-        T_OUT=$(echo "$arcdata" | jq -r '.T_OUT')
+        #T_OUT=$(echo "$arcdata" | jq -r '.T_OUT')
         K=$(echo "$arcdata" | jq -r '.K')
         TMRSTATE=$(echo "$arcdata" | jq -r '.TMRSTATE')
         WARNINGSTATE=$(echo "$arcdata" | jq -r '.WARNINGSTATE')
         CRASHSTATE=$(echo "$arcdata" | jq -r '.CRASHSTATE')
-        EVENTCODE=$(echo "$arcdata" | jq -r '.EVENTCODE')
         VSUND=$(echo "$arcdata" | jq -r '.VSUND')
         SENSORSTATE=$(echo "$arcdata" | jq -r '.SENSORSTATE')
         VALVESTATE=$(echo "$arcdata" | jq -r '.VALVESTATE')
@@ -224,6 +223,7 @@ for ((i=1; i<=$arcnums; i++)); do
         SENSORSTATE_PR=$(echo "$arcdata" | jq -r '.SENSORSTATE_PR')
         VALVESTATE_PR=$(echo "$arcdata" | jq -r '.VALVESTATE_PR')
         VSUND=$(echo "$arcdata" | jq -r '.VSUND')
+        LASTHOURARCNUM=$(echo "$arcdata" | jq -r '.LASTHOURARCNUM')
 
         F_devdate=$(echo "${arr[1]}" | sed 's/,/ /g')
         F_VSTOT=$(echo "scale=4; ${arr[2]} * $VOLUME_PULSE" | bc)
@@ -242,7 +242,7 @@ for ((i=1; i<=$arcnums; i++)); do
         F_TMRSTATE=$(printf "%d" 0x"${arr[6]}" 2>/dev/null)
         F_WARNINGSTATE=$(printf "%d" 0x"${arr[7]}" 2>/dev/null)
         F_CRASHSTATE=$(printf "%d" 0x"${arr[9]}" 2>/dev/null)
-        F_EVENTCODE=$(printf "%d" 0x"${arr[10]}" 2>/dev/null)
+        F_LASTHOURARCNUM=${arr[10]}
         F_VSUND=$(echo "scale=4; ${arr[12]} * $VOLUME_PULSE" | bc)
             if [[ "$F_VSUND" == *0 ]]; then
                 F_VSUND=$(echo "$F_VSUND" | sed 's/0*$//')
@@ -269,7 +269,7 @@ for ((i=1; i<=$arcnums; i++)); do
     #    [7]	WARNINGSTATE
     #    [8]
     #    [9] 	CRASHSTATE
-    #    [10]	EVENTCODE
+    #    [10]	EVENTCODE/LASTHOURARCNUM
     #    [11]
     #    [12]	VSUND
     #    [13]	SENSORSTATE
@@ -424,22 +424,22 @@ for ((i=1; i<=$arcnums; i++)); do
         fi
 
         sleep 0.03
-        if [[ "$F_EVENTCODE" == "$EVENTCODE" ]]; then
-            echo "EVENTCODE"
-            echo -e "${GREEN}F: $F_EVENTCODE${NC}"
-            echo -e "${GREEN}B: $EVENTCODE${NC}"
+        if [[ "$F_LASTHOURARCNUM" == "$LASTHOURARCNUM" ]]; then
+            echo "LASTHOURARCNUM"
+            echo -e "${GREEN}F: $F_LASTHOURARCNUM${NC}"
+            echo -e "${GREEN}B: $LASTHOURARCNUM${NC}"
             # запись в log
             DATE_STR=$(date +"%d.%m.%Y")
             TIME_STR=$(date +"%H:%M:%S")
-            echo "[$DATE_STR][$TIME_STR][$MODULE_NAME][Passed][Запись: ${arr[0]} EVENTCODE: FILE ==> $F_EVENTCODE DB ==> $EVENTCODE параметры совпали]" >> $LOG
+            echo "[$DATE_STR][$TIME_STR][$MODULE_NAME][Passed][Запись: ${arr[0]} LASTHOURARCNUM: FILE ==> $F_LASTHOURARCNUM DB ==> $LASTHOURARCNUM параметры совпали]" >> $LOG
         else
-            echo "EVENTCODE"
-            echo -e "${RED}F: $F_EVENTCODE${NC}"
-            echo -e "${RED}B: $EVENTCODE${NC}"
+            echo "LASTHOURARCNUM"
+            echo -e "${RED}F: $F_LASTHOURARCNUM${NC}"
+            echo -e "${RED}B: $LASTHOURARCNUM${NC}"
             # запись в log
             DATE_STR=$(date +"%d.%m.%Y")
             TIME_STR=$(date +"%H:%M:%S")
-            echo "[$DATE_STR][$TIME_STR][$MODULE_NAME][Failed][Запись: ${arr[0]} EVENTCODE: FILE ==> $F_EVENTCODE DB ==> $EVENTCODE параметры не совпали]" >> $LOG
+            echo "[$DATE_STR][$TIME_STR][$MODULE_NAME][Failed][Запись: ${arr[0]} LASTHOURARCNUM: FILE ==> $F_LASTHOURARCNUM DB ==> $LASTHOURARCNUM параметры не совпали]" >> $LOG
         fi
 
         sleep 0.03
