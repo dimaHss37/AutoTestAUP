@@ -47,25 +47,6 @@ else
 fi
 
 
-P_NAME_FILE=$(echo "$NAME_FILE" | grep -o "_" | wc -l)
-if [ $P_NAME_FILE == 3 ]; then
-    devnum=$(echo "${NAME_FILE#*_}")
-    devnum=$(echo "${devnum#*_}")
-    devnum=$(echo "${devnum%_*}")
-else
-    devnum=$(echo "$NAME_FILE" | sed 's/.*_//' | cut -d'.' -f1)
-fi
-
-export PGPASSWORD=$Password
-device_id=$(psql -U $Login -h $Host -p $Port -d $Name -tA -c "select id from devices_custs.device
-where devnum='$devnum';")
-unset PGPASSWORD
-
-export PGPASSWORD=$Password
-flow_id=$(psql -U $Login -h $Host -d $Name -p $Port -tA -c "SELECT id FROM devices_custs.flow
-where device_id = $device_id;")
-unset PGPASSWORD
-
 
 # Путь к обрабатываемому файлу
 TARGET="$ACTIVE_DIR/rdt/$NAME_FILE"
@@ -81,6 +62,7 @@ ARCHIVE3=$(cat $TARGET | awk '/\[ARCHIVE3\]/{f=2} f && /#/ {f=0; print; next} f'
 
 if [[ -z "$ARCHIVE3" ]]; then
     echo "В файле: $NAME_FILE нет интервального архива"
+    echo "---------------------------"
     echo ""
     echo "[$DATE_STR][$TIME_STR][$MOD][$MODULE_NAME][В тестируемом файле нет интервального архива]" >> $LOG
     exit 0
@@ -99,17 +81,6 @@ for ((i=1; i<=$arcnums; i++)); do
     values=$((values + 1))
 
     IFS=';' read -r -a arr <<< "$line"
-
-
-        ACTUAL_COUNTERS=$(tac $TARGET | grep -m 1 "ACTUAL COUNTERS" -a1 | head -n 1)
-        IFS=';' read -r -a ac <<< "$ACTUAL_COUNTERS" # Преобразует строку в массив 'ac'
-
-        VOLUME_PULSE=$(echo "scale=4; 1 / ${ac[1]}" | bc)
-        VOLUME_PULSE=0${VOLUME_PULSE}
-       # if [[ $(echo "$DB_VOLUME_PULSE == 0.001 && $VOLUME_PULSE == 0.0010" | bc) -eq 1 ]]; then
-       #     DB_VOLUME_PULSE=0.0010
-       # fi
-
 
         export PGPASSWORD=$Password
         devdate=$(psql -U $Login -h $Host -d $Name -p $Port -tA -c "SELECT devdate FROM archives.intarc
@@ -196,34 +167,6 @@ for ((i=1; i<=$arcnums; i++)); do
         F_BATTERY_PERCENT_INPUT=$(echo "scale=2; $F_BATTERY_PERCENT_INPUT / 100" | bc)
 
 
-    #    [0] 	arcnum
-    #    [1] 	devdate
-    #    [2]	VSTOT
-    #    [3] 	T
-    #    [4] 	T_OUT
-    #    [5] 	K
-    #    [6]	TMRSTATE
-    #    [7]	WARNINGSTATE
-    #    [8]
-    #    [9] 	CRASHSTATE
-    #    [10]	EVENTCODE
-    #    [11]
-    #    [12]	VSUND
-    #    [13]	SENSORSTATE
-    #    [14]
-    #    [15]	VALVESTATE
-    #    [16]	BATTERY_PERCENT
-    #    [17]	BATTERY_PERCENT_INPUT
-
-    #          	ALARMSTATE
-    #          	RPUSTATE
-    #          	SENSORSTATE_PR
-    #          	VALVESTATE_PR
-    #          	VSUND
-
-
-
-
         echo "arcnum: ${arr[0]}"
         echo ""
 
@@ -234,14 +177,14 @@ for ((i=1; i<=$arcnums; i++)); do
             echo -e "${GREEN}B: $devdate${NC}"
             # запись в log
             TIME_STR=$(date +"%H:%M:%S")
-            echo "[$DATE_STR][$TIME_STR][$MOD][$MODULE_NAME][Passed][Запись: ${arr[0]} DEVDATE: FILE -> $F_devdate DB -> $devdate параметры совпали]" >> $LOG
+            echo "[$DATE_STR][$TIME_STR][$MOD][$MODULE_NAME][Passed][Запись: ${arr[0]} DEVDATE: FILE -> $F_devdate DB -> $devdate значения совпали]" >> $LOG
         else
             echo "DEVDATE"
             echo -e "${RED}F: $F_devdate${NC}"
             echo -e "${RED}B: $devdate${NC}"
             # запись в log
             TIME_STR=$(date +"%H:%M:%S")
-            echo "[$DATE_STR][$TIME_STR][$MOD][$MODULE_NAME][Failed][Запись: ${arr[0]} DEVDATE: FILE -> $F_devdate DB -> $devdate параметры не совпали]" >> $LOG
+            echo "[$DATE_STR][$TIME_STR][$MOD][$MODULE_NAME][Failed][Запись: ${arr[0]} DEVDATE: FILE -> $F_devdate DB -> $devdate значения не совпали]" >> $LOG
         fi
 
         sleep 0.03
@@ -251,14 +194,14 @@ for ((i=1; i<=$arcnums; i++)); do
             echo -e "${GREEN}B: $VSTOT${NC}"
             # запись в log
             TIME_STR=$(date +"%H:%M:%S")
-            echo "[$DATE_STR][$TIME_STR][$MOD][$MODULE_NAME][Passed][Запись: ${arr[0]} VSTOT: FILE -> $F_VSTOT DB -> $VSTOT параметры совпали]" >> $LOG
+            echo "[$DATE_STR][$TIME_STR][$MOD][$MODULE_NAME][Passed][Запись: ${arr[0]} VSTOT: FILE -> $F_VSTOT DB -> $VSTOT значения совпали]" >> $LOG
         else
             echo "VSTOT"
             echo -e "${RED}F: $F_VSTOT${NC}"
             echo -e "${RED}B: $VSTOT${NC}"
             # запись в log
             TIME_STR=$(date +"%H:%M:%S")
-            echo "[$DATE_STR][$TIME_STR][$MOD][$MODULE_NAME][Failed][Запись: ${arr[0]} VSTOT: FILE -> $F_VSTOT DB -> $VSTOT параметры не совпали]" >> $LOG
+            echo "[$DATE_STR][$TIME_STR][$MOD][$MODULE_NAME][Failed][Запись: ${arr[0]} VSTOT: FILE -> $F_VSTOT DB -> $VSTOT значения не совпали]" >> $LOG
         fi
 
          sleep 0.03
@@ -268,14 +211,14 @@ for ((i=1; i<=$arcnums; i++)); do
              echo -e "${GREEN}B: $T${NC}"
              # запись в log
              TIME_STR=$(date +"%H:%M:%S")
-             echo "[$DATE_STR][$TIME_STR][$MOD][$MODULE_NAME][Passed][Запись: ${arr[0]} T: FILE -> $F_T DB -> $T параметры совпали]" >> $LOG
+             echo "[$DATE_STR][$TIME_STR][$MOD][$MODULE_NAME][Passed][Запись: ${arr[0]} T: FILE -> $F_T DB -> $T значения совпали]" >> $LOG
          else
              echo "T"
              echo -e "${RED}F: $F_T${NC}"
              echo -e "${RED}B: $T${NC}"
              # запись в log
              TIME_STR=$(date +"%H:%M:%S")
-             echo "[$DATE_STR][$TIME_STR][$MOD][$MODULE_NAME][Failed][Запись: ${arr[0]} T: FILE -> $F_T DB -> $T параметры не совпали]" >> $LOG
+             echo "[$DATE_STR][$TIME_STR][$MOD][$MODULE_NAME][Failed][Запись: ${arr[0]} T: FILE -> $F_T DB -> $T значения не совпали]" >> $LOG
          fi
 
          sleep 0.03
@@ -285,14 +228,14 @@ for ((i=1; i<=$arcnums; i++)); do
              echo -e "${GREEN}B: $K${NC}"
              # запись в log
              TIME_STR=$(date +"%H:%M:%S")
-             echo "[$DATE_STR][$TIME_STR][$MOD][$MODULE_NAME][Passed][Запись: ${arr[0]} K: FILE -> $F_K DB -> $K параметры совпали]" >> $LOG
+             echo "[$DATE_STR][$TIME_STR][$MOD][$MODULE_NAME][Passed][Запись: ${arr[0]} K: FILE -> $F_K DB -> $K значения совпали]" >> $LOG
          else
              echo "TMRSTATE"
              echo -e "${RED}F: $F_K${NC}"
              echo -e "${RED}B: $K${NC}"
              # запись в log
              TIME_STR=$(date +"%H:%M:%S")
-             echo "[$DATE_STR][$TIME_STR][$MOD][$MODULE_NAME][Failed][Запись: ${arr[0]} K: FILE -> $F_K DB -> $K параметры не совпали]" >> $LOG
+             echo "[$DATE_STR][$TIME_STR][$MOD][$MODULE_NAME][Failed][Запись: ${arr[0]} K: FILE -> $F_K DB -> $K значения не совпали]" >> $LOG
          fi
 
         sleep 0.03
@@ -302,14 +245,14 @@ for ((i=1; i<=$arcnums; i++)); do
             echo -e "${GREEN}B: $TMRSTATE${NC}"
             # запись в log
             TIME_STR=$(date +"%H:%M:%S")
-            echo "[$DATE_STR][$TIME_STR][$MOD][$MODULE_NAME][Passed][Запись: ${arr[0]} TMRSTATE: FILE -> $F_TMRSTATE DB -> $TMRSTATE параметры совпали]" >> $LOG
+            echo "[$DATE_STR][$TIME_STR][$MOD][$MODULE_NAME][Passed][Запись: ${arr[0]} TMRSTATE: FILE -> $F_TMRSTATE DB -> $TMRSTATE значения совпали]" >> $LOG
         else
             echo "TMRSTATE"
             echo -e "${RED}F: $F_TMRSTATE${NC}"
             echo -e "${RED}B: $TMRSTATE${NC}"
             # запись в log
             TIME_STR=$(date +"%H:%M:%S")
-            echo "[$DATE_STR][$TIME_STR][$MOD][$MODULE_NAME][Failed][Запись: ${arr[0]} TMRSTATE: FILE -> $F_TMRSTATE DB -> $TMRSTATE параметры не совпали]" >> $LOG
+            echo "[$DATE_STR][$TIME_STR][$MOD][$MODULE_NAME][Failed][Запись: ${arr[0]} TMRSTATE: FILE -> $F_TMRSTATE DB -> $TMRSTATE значения не совпали]" >> $LOG
         fi
 
         sleep 0.03
@@ -319,14 +262,14 @@ for ((i=1; i<=$arcnums; i++)); do
             echo -e "${GREEN}B: $WARNINGSTATE${NC}"
             # запись в log
             TIME_STR=$(date +"%H:%M:%S")
-            echo "[$DATE_STR][$TIME_STR][$MOD][$MODULE_NAME][Passed][Запись: ${arr[0]} WARNINGSTATE: FILE -> $F_WARNINGSTATE DB -> $WARNINGSTATE параметры совпали]" >> $LOG
+            echo "[$DATE_STR][$TIME_STR][$MOD][$MODULE_NAME][Passed][Запись: ${arr[0]} WARNINGSTATE: FILE -> $F_WARNINGSTATE DB -> $WARNINGSTATE значения совпали]" >> $LOG
         else
             echo "WARNINGSTATE"
             echo -e "${RED}F: $F_WARNINGSTATE${NC}"
             echo -e "${RED}B: $WARNINGSTATE${NC}"
             # запись в log
             TIME_STR=$(date +"%H:%M:%S")
-            echo "[$DATE_STR][$TIME_STR][$MOD][$MODULE_NAME][Failed][Запись: ${arr[0]} WARNINGSTATE: FILE -> $F_WARNINGSTATE DB -> $WARNINGSTATE параметры не совпали]" >> $LOG
+            echo "[$DATE_STR][$TIME_STR][$MOD][$MODULE_NAME][Failed][Запись: ${arr[0]} WARNINGSTATE: FILE -> $F_WARNINGSTATE DB -> $WARNINGSTATE значения не совпали]" >> $LOG
         fi
 
         sleep 0.03
@@ -336,14 +279,14 @@ for ((i=1; i<=$arcnums; i++)); do
             echo -e "${GREEN}B: $CRASHSTATE${NC}"
             # запись в log
             TIME_STR=$(date +"%H:%M:%S")
-            echo "[$DATE_STR][$TIME_STR][$MOD][$MODULE_NAME][Passed][Запись: ${arr[0]} CRASHSTATE: FILE -> $F_CRASHSTATE DB -> $CRASHSTATE параметры совпали]" >> $LOG
+            echo "[$DATE_STR][$TIME_STR][$MOD][$MODULE_NAME][Passed][Запись: ${arr[0]} CRASHSTATE: FILE -> $F_CRASHSTATE DB -> $CRASHSTATE значения совпали]" >> $LOG
         else
             echo "CRASHSTATE"
             echo -e "${RED}F: $F_CRASHSTATE${NC}"
             echo -e "${RED}B: $CRASHSTATE${NC}"
             # запись в log
             TIME_STR=$(date +"%H:%M:%S")
-            echo "[$DATE_STR][$TIME_STR][$MOD][$MODULE_NAME][Failed][Запись: ${arr[0]} CRASHSTATE: FILE -> $F_CRASHSTATE DB -> $CRASHSTATE параметры не совпали]" >> $LOG
+            echo "[$DATE_STR][$TIME_STR][$MOD][$MODULE_NAME][Failed][Запись: ${arr[0]} CRASHSTATE: FILE -> $F_CRASHSTATE DB -> $CRASHSTATE значения не совпали]" >> $LOG
         fi
 
         sleep 0.03
@@ -353,14 +296,14 @@ for ((i=1; i<=$arcnums; i++)); do
             echo -e "${GREEN}B: $EVENTCODE${NC}"
             # запись в log
             TIME_STR=$(date +"%H:%M:%S")
-            echo "[$DATE_STR][$TIME_STR][$MOD][$MODULE_NAME][Passed][Запись: ${arr[0]} EVENTCODE: FILE -> $F_EVENTCODE DB -> $EVENTCODE параметры совпали]" >> $LOG
+            echo "[$DATE_STR][$TIME_STR][$MOD][$MODULE_NAME][Passed][Запись: ${arr[0]} EVENTCODE: FILE -> $F_EVENTCODE DB -> $EVENTCODE значения совпали]" >> $LOG
         else
             echo "EVENTCODE"
             echo -e "${RED}F: $F_EVENTCODE${NC}"
             echo -e "${RED}B: $EVENTCODE${NC}"
             # запись в log
             TIME_STR=$(date +"%H:%M:%S")
-            echo "[$DATE_STR][$TIME_STR][$MOD][$MODULE_NAME][Failed][Запись: ${arr[0]} EVENTCODE: FILE -> $F_EVENTCODE DB -> $EVENTCODE параметры не совпали]" >> $LOG
+            echo "[$DATE_STR][$TIME_STR][$MOD][$MODULE_NAME][Failed][Запись: ${arr[0]} EVENTCODE: FILE -> $F_EVENTCODE DB -> $EVENTCODE значения не совпали]" >> $LOG
         fi
 
         sleep 0.03
@@ -370,14 +313,14 @@ for ((i=1; i<=$arcnums; i++)); do
             echo -e "${GREEN}B: $VSUND${NC}"
             # запись в log
             TIME_STR=$(date +"%H:%M:%S")
-            echo "[$DATE_STR][$TIME_STR][$MOD][$MODULE_NAME][Passed][Запись: ${arr[0]} VSUND: FILE -> $F_VSUND DB -> $VSUND параметры совпали]" >> $LOG
+            echo "[$DATE_STR][$TIME_STR][$MOD][$MODULE_NAME][Passed][Запись: ${arr[0]} VSUND: FILE -> $F_VSUND DB -> $VSUND значения совпали]" >> $LOG
         else
             echo "VSUND"
             echo -e "${RED}F: $F_VSUND${NC}"
             echo -e "${RED}B: $VSUND${NC}"
             # запись в log
             TIME_STR=$(date +"%H:%M:%S")
-            echo "[$DATE_STR][$TIME_STR][$MOD][$MODULE_NAME][Failed][Запись: ${arr[0]} VSUND: FILE -> $F_VSUND DB -> $VSUND параметры не совпали]" >> $LOG
+            echo "[$DATE_STR][$TIME_STR][$MOD][$MODULE_NAME][Failed][Запись: ${arr[0]} VSUND: FILE -> $F_VSUND DB -> $VSUND значения не совпали]" >> $LOG
         fi
 
         sleep 0.03
@@ -387,14 +330,14 @@ for ((i=1; i<=$arcnums; i++)); do
             echo -e "${GREEN}B: $SENSORSTATE${NC}"
             # запись в log
             TIME_STR=$(date +"%H:%M:%S")
-            echo "[$DATE_STR][$TIME_STR][$MOD][$MODULE_NAME][Passed][Запись: ${arr[0]} SENSORSTATE: FILE -> $F_SENSORSTATE DB -> $SENSORSTATE параметры совпали]" >> $LOG
+            echo "[$DATE_STR][$TIME_STR][$MOD][$MODULE_NAME][Passed][Запись: ${arr[0]} SENSORSTATE: FILE -> $F_SENSORSTATE DB -> $SENSORSTATE значения совпали]" >> $LOG
         else
             echo "SENSORSTATE"
             echo -e "${RED}F: $F_SENSORSTATE${NC}"
             echo -e "${RED}B: $SENSORSTATE${NC}"
             # запись в log
             TIME_STR=$(date +"%H:%M:%S")
-            echo "[$DATE_STR][$TIME_STR][$MOD][$MODULE_NAME][Failed][Запись: ${arr[0]} SENSORSTATE: FILE -> $F_SENSORSTATE DB -> $SENSORSTATE параметры не совпали]" >> $LOG
+            echo "[$DATE_STR][$TIME_STR][$MOD][$MODULE_NAME][Failed][Запись: ${arr[0]} SENSORSTATE: FILE -> $F_SENSORSTATE DB -> $SENSORSTATE значения не совпали]" >> $LOG
         fi
 
         sleep 0.03
@@ -404,14 +347,14 @@ for ((i=1; i<=$arcnums; i++)); do
             echo -e "${GREEN}B: $VALVESTATE${NC}"
             # запись в log
             TIME_STR=$(date +"%H:%M:%S")
-            echo "[$DATE_STR][$TIME_STR][$MOD][$MODULE_NAME][Passed][Запись: ${arr[0]} VALVESTATE: FILE -> $F_VALVESTATE DB -> $VALVESTATE параметры совпали]" >> $LOG
+            echo "[$DATE_STR][$TIME_STR][$MOD][$MODULE_NAME][Passed][Запись: ${arr[0]} VALVESTATE: FILE -> $F_VALVESTATE DB -> $VALVESTATE значения совпали]" >> $LOG
         else
             echo "VALVESTATE"
             echo -e "${RED}F: $F_VALVESTATE${NC}"
             echo -e "${RED}B: $VALVESTATE${NC}"
             # запись в log
             TIME_STR=$(date +"%H:%M:%S")
-            echo "[$DATE_STR][$TIME_STR][$MOD][$MODULE_NAME][Failed][Запись: ${arr[0]} VALVESTATE: FILE -> $F_VALVESTATE DB -> $VALVESTATE параметры не совпали]" >> $LOG
+            echo "[$DATE_STR][$TIME_STR][$MOD][$MODULE_NAME][Failed][Запись: ${arr[0]} VALVESTATE: FILE -> $F_VALVESTATE DB -> $VALVESTATE значения не совпали]" >> $LOG
         fi
 
     if [ -n "$F_BATTERY_PERCENT" ]; then
@@ -422,14 +365,14 @@ for ((i=1; i<=$arcnums; i++)); do
             echo -e "${GREEN}B: $BATTERY_PERCENT${NC}"
             # запись в log
             TIME_STR=$(date +"%H:%M:%S")
-            echo "[$DATE_STR][$TIME_STR][$MOD][$MODULE_NAME][Passed][Запись: ${arr[0]} BATTERY_PERCENT: FILE -> $F_BATTERY_PERCENT DB -> $BATTERY_PERCENT параметры совпали]" >> $LOG
+            echo "[$DATE_STR][$TIME_STR][$MOD][$MODULE_NAME][Passed][Запись: ${arr[0]} BATTERY_PERCENT: FILE -> $F_BATTERY_PERCENT DB -> $BATTERY_PERCENT значения совпали]" >> $LOG
         else
             echo "BATTERY_PERCENT"
             echo -e "${RED}F: $F_BATTERY_PERCENT${NC}"
             echo -e "${RED}B: $BATTERY_PERCENT${NC}"
             # запись в log
             TIME_STR=$(date +"%H:%M:%S")
-            echo "[$DATE_STR][$TIME_STR][$MOD][$MODULE_NAME][Failed][Запись: ${arr[0]} BATTERY_PERCENT: FILE -> $F_BATTERY_PERCENT DB -> $BATTERY_PERCENT параметры не совпали]" >> $LOG
+            echo "[$DATE_STR][$TIME_STR][$MOD][$MODULE_NAME][Failed][Запись: ${arr[0]} BATTERY_PERCENT: FILE -> $F_BATTERY_PERCENT DB -> $BATTERY_PERCENT значения не совпали]" >> $LOG
         fi
     fi
 
@@ -441,14 +384,14 @@ for ((i=1; i<=$arcnums; i++)); do
             echo -e "${GREEN}B: $BATTERY_PERCENT_INPUT${NC}"
             # запись в log
             TIME_STR=$(date +"%H:%M:%S")
-            echo "[$DATE_STR][$TIME_STR][$MOD][$MODULE_NAME][Passed][Запись: ${arr[0]} BATTERY_PERCENT_INPUT: FILE -> $F_BATTERY_PERCENT_INPUT DB -> $BATTERY_PERCENT_INPUT параметры совпали]" >> $LOG
+            echo "[$DATE_STR][$TIME_STR][$MOD][$MODULE_NAME][Passed][Запись: ${arr[0]} BATTERY_PERCENT_INPUT: FILE -> $F_BATTERY_PERCENT_INPUT DB -> $BATTERY_PERCENT_INPUT значения совпали]" >> $LOG
         else
             echo "BATTERY_PERCENT_INPUT"
             echo -e "${RED}F: $F_BATTERY_PERCENT_INPUT${NC}"
             echo -e "${RED}B: $BATTERY_PERCENT_INPUT${NC}"
             # запись в log
             TIME_STR=$(date +"%H:%M:%S")
-            echo "[$DATE_STR][$TIME_STR][$MOD][$MODULE_NAME][Failed][Запись: ${arr[0]} BATTERY_PERCENT_INPUT: FILE -> $F_BATTERY_PERCENT_INPUT DB -> $BATTERY_PERCENT_INPUT параметры не совпали]" >> $LOG
+            echo "[$DATE_STR][$TIME_STR][$MOD][$MODULE_NAME][Failed][Запись: ${arr[0]} BATTERY_PERCENT_INPUT: FILE -> $F_BATTERY_PERCENT_INPUT DB -> $BATTERY_PERCENT_INPUT значения не совпали]" >> $LOG
         fi
     fi
 
