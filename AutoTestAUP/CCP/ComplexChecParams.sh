@@ -27,7 +27,6 @@ if [ "$DatabaseLocation" == "Local" ]; then
         Password=$(cat $FILE_SGS_JSON | jq -r '.DatabaseConnection.Local.PostgreSQL.SGS.Password')
     else
         echo "Firebird"
-        # Запускаем подменю программы
         exit 0
     fi
 else
@@ -41,7 +40,6 @@ else
             Password=$(cat $FILE_SGS_JSON | jq -r '.DatabaseConnection.Server.PostgreSQL.SGS.Password')
         else
             echo "Firebird"
-            # Запускаем подменю программы
             exit 0
         fi
     else
@@ -60,6 +58,7 @@ fi
 # Ищем папку "In", куда будем копировать файл
 IN_DIR=$(find /opt -type d -name "In" 2>/dev/null | grep Arc/In)
 OW_DIR=$(find /opt -type d -name "OW" 2>/dev/null | grep Arc/Out/OW)
+OK_DIR=$(find /opt -type d -name "OK" 2>/dev/null | grep Arc/Out/OK)
 
 ACTIVE_DIR=$(dirname "$0")
 export ACTIVE_DIR=$ACTIVE_DIR
@@ -154,10 +153,11 @@ export LOG=$LOG
 
 
 export PGPASSWORD=$Password
-devtype_id=$(psql -U $Login -h $Host -d $Name -p $Port -tA -c "SELECT devtype_id FROM devices_custs.device
+device_id=$(psql -U $Login -h $Host -p $Port -d $Name -tA -c "select id from devices_custs.device
 where devnum='$devnum';")
 unset PGPASSWORD
-if [ -z "$devtype_id" ]; then
+DATE_STR=$(date +"%d.%m.%Y")
+if [ -z "$device_id" ]; then
     # обработка файла
     cp $TARGET $IN_DIR
     echo "" >> $LOG
@@ -211,6 +211,7 @@ else
     done
 
 fi
+
 echo "[$DATE_STR][$TIME_STR][$MODULE_NAME][I][Файл $NAME_FILE обработан]" >> $LOG
 echo "Файл $NAME_FILE обработан"
 sleep 1
@@ -218,10 +219,20 @@ sleep 1
 # Проверка файл в OW?
 if [ -n "$(find "$OW_DIR" -type f -name "$NAME_FILE" 2>/dev/null)" ]; then
     echo "[$DATE_STR][$TIME_STR][$MODULE_NAME][F][Файл $NAME_FILE перемещён в директорию OW]" >> $LOG
-    echo "Файл $NAME_FILE перемещён в директорию OW"
+    echo -e "Файл $NAME_FILE перемещён в директорию ${RED}OW${NC}"
     exit 1
 fi
 
+# Проверка файл в OK?
+if [ -n "$(find "$OK_DIR" -type f -name "$NAME_FILE" 2>/dev/null)" ]; then
+    echo "[$DATE_STR][$TIME_STR][$MODULE_NAME][I][Файл $NAME_FILE перемещён в директорию OK]" >> $LOG
+    echo -e "Файл $NAME_FILE перемещён в директорию ${GREEN}OK${NC}"
+fi
+
+export PGPASSWORD=$Password
+devtype_id=$(psql -U $Login -h $Host -d $Name -p $Port -tA -c "SELECT devtype_id FROM devices_custs.device
+where devnum='$devnum';")
+unset PGPASSWORD
 export PGPASSWORD=$Password
 device_id=$(psql -U $Login -h $Host -p $Port -d $Name -tA -c "select id from devices_custs.device
 where devnum='$devnum';")
@@ -245,7 +256,7 @@ export flow_id=$flow_id
 # TYPE
 TYPE=$(cat $TARGET | grep type -i | grep -o '[0-9]\+')
 
-# ТМР-01
+# ТМР-01 -> 1
 SMT_numbs=" 1 99 96 9 82 81 80 8 79 78 77 76 75 74 73 72 71 7 68 67 66 65 64 6 53 52 51 50 5
 49 4 38 37 36 35 34 3100 3099 3096 3066 3065 3064 3051 3050 3049 3010 3009 3008 3005 3004
 3003 3 28 27 26 25 24 23 22 2100 21 2099 2096 2066 2065 2064 2051 2050 2049 2010 2009 2008
@@ -295,7 +306,6 @@ sleep 3
 echo -e "\e[1m[DEVICE DATA]\e[0m"
 echo "---------------------------"
 # запись в log
-DATE_STR=$(date +"%d.%m.%Y")
 TIME_STR=$(date +"%H:%M:%S")
 echo "" >> $LOG
 echo "------------------------------------------------------------------------" >> $LOG
@@ -377,9 +387,13 @@ if [[ "$VERS" == 1.0* ]]; then
 #if (( $(echo "$VERS >= 1.0" | bc -l) )); then
     VERS_K=$VERS
     VERS_S=""
+    export VERS_K=$VERS_K
+    export VERS_S=$VERS_S
 else
     VERS_S=$VERS
     VERS_K=""
+    export VERS_S=$VERS_S
+    export VERS_K=$VERS_K
 fi
 
     # Получения значения из БД
@@ -504,11 +518,18 @@ export PGPASSWORD=$Password
 DB_VOLUME_PULSE=$(psql -U $Login -d $Name -h $Host -p $Port -tA -c "select value from info_params.device_info_params
 where device_id=$device_id and attribute_id=103;")
 unset PGPASSWORD
-STR1=$(echo "scale=4; 1 / ${arr[$i]}" | bc)
-VOLUME_PULSE=0$STR1
-if [[ $(echo "$DB_VOLUME_PULSE == 0.001 && $VOLUME_PULSE == 0.0010" | bc) -eq 1 ]]; then
-    DB_VOLUME_PULSE=0.0010
+
+
+if [ -z ${arr[$i]} ]; then
+    VOLUME_PULSE=0.001
+else
+    VOLUME_PULSE=$(echo "scale=4; 1 / ${arr[$i]}" | bc)
+    VOLUME_PULSE=0$VOLUME_PULSE
+    if [[ "$DB_VOLUME_PULSE" == 0.001 ]] && [[ "$VOLUME_PULSE" == "0.0010" ]]; then
+        DB_VOLUME_PULSE=0.0010
+    fi
 fi
+
 export VOLUME_PULSE=$VOLUME_PULSE
 STR1="VOLUME_PULSE: $VOLUME_PULSE"
 STR2="VOLUME_PULSE: $DB_VOLUME_PULSE"
@@ -551,6 +572,7 @@ CURRENT_COUNTER=$(echo "scale=4; ${arr[$i]} * $VOLUME_PULSE" | bc)
 if [[ "$CURRENT_COUNTER" == .* ]]; then
     CURRENT_COUNTER=0$CURRENT_COUNTER
 fi
+CURRENT_COUNTER=$(echo "$CURRENT_COUNTER" | sed -r 's/[,.][0-9]{3}$/&0/')
 STR1="CURRENT_COUNTER: $CURRENT_COUNTER"
 STR2="CURRENT_COUNTER: $DB_CURRENT_COUNTER"
 sleep 0.1
@@ -2582,8 +2604,8 @@ export PGPASSWORD=$Password
 DB_BATTERY_TELEMETRY=$(psql -U $Login -h $Host -p $Port -d $Name -tA -c "select value from info_params.device_info_params
 where device_id=$device_id and attribute_id=3022;")
 unset PGPASSWORD
-BATTERY_TELEMETRY=${arr[$i]}
-STR1="BATTERY_TELEMETRY: ${arr[$i]}"
+BATTERY_TELEMETRY=$(echo "${arr[$i]}" | sed 's/[[:space:]]*$//')
+STR1="BATTERY_TELEMETRY: $BATTERY_TELEMETRY"
 STR2="BATTERY_TELEMETRY: $DB_BATTERY_TELEMETRY"
 sleep 0.2
 if echo "$STR1" | grep -wq "$STR2"; then
@@ -2714,24 +2736,14 @@ fi
 
 # 47 LASTVSDIST     //CURRENT_COUNTER_DISC (uint64) - м3*10000 - накопленный возмущённый объём.
 # Значение надо посчтиать по формуле CURRENT_COUNTER_DISC * VOLUME_PULSE
-# export PGPASSWORD=$Password
-#DB_LASTVSDIST=$(psql -U $Login -h $Host -p $Port -d $Name -tA -c "select value from info_params.device_info_params
-#where device_id=$device_id and attribute_id=2678;")
-# unset PGPASSWORD
-export PGPASSWORD=$Password
-flow_id=$(psql -U $Login -h $Host -p $Port -d $Name -tA -c "select id from devices_custs.flow
-where device_id = $device_id;")
-unset PGPASSWORD
 export PGPASSWORD=$Password
 arcdata=$(psql -U $Login -h $Host -p $Port -d $Name -tA -c "select arcdata from archives.intarc
 where flow_id = $flow_id
-order by arcnum desc
-LIMIT 1;")
+order by arcnum desc LIMIT 1;")
 unset PGPASSWORD
 DB_LASTVSDIST=$(echo "$arcdata" | jq -r '.VSDIST')
-LASTVSDIST=${arr[$i]}
-#LASTVSDIST=$(echo "scale=4; ${arr[$i]} * $VOLUME_PULSE" | bc)
-STR1="LASTVSDIST: ${arr[$i]}"
+LASTVSDIST=$(echo "scale=4; ${arr[$i]} * $VOLUME_PULSE" | bc 2>>/dev/null)
+STR1="LASTVSDIST: $LASTVSDIST"
 STR2="LASTVSDIST: $DB_LASTVSDIST"
 sleep 0.2
 if echo "$STR1" | grep -wq "$STR2"; then
@@ -2744,7 +2756,6 @@ if echo "$STR1" | grep -wq "$STR2"; then
     echo "[$DATE_STR][$TIME_STR][$MOD][$MODULE_NAME][Passed][Параметр №47 LASTVSDIST: FILE -> $LASTVSDIST DB -> $DB_LASTVSDIST значения совпали]" >> $LOG
     ((i++))
     if [ "$i" -ge "$COUNTERS" ]; then
-        # Запускаем подменю программы
         exit 0
     fi
 else
@@ -2757,7 +2768,6 @@ else
     echo "[$DATE_STR][$TIME_STR][$MOD][$MODULE_NAME][Failed][Параметр №47 LASTVSDIST: FILE -> $LASTVSDIST DB -> $DB_LASTVSDIST значения не совпали]" >> $LOG
     ((i++))
     if [ "$i" -ge "$COUNTERS" ]; then
-        # Запускаем подменю программы
         exit 0
     fi
 fi
@@ -3041,6 +3051,14 @@ if echo "$STR1" | grep -wq "$STR2"; then
     ((i++))
     if [ "$i" -ge "$COUNTERS" ]; then
         # Запускаем подменю программы
+        $ACTIVE_DIR/ModSimData.sh
+        $ACTIVE_DIR/ModARC3.sh
+        $ACTIVE_DIR/ModARC4.sh
+        $ACTIVE_DIR/ModARC5.sh
+        $ACTIVE_DIR/ModARC7.sh
+        $ACTIVE_DIR/ModARC9.sh
+        $ACTIVE_DIR/ModSESSION.sh
+        $ACTIVE_DIR/TestReport.sh
         exit 0
     fi
 else
@@ -3054,6 +3072,14 @@ else
     ((i++))
     if [ "$i" -ge "$COUNTERS" ]; then
         # Запускаем подменю программы
+        $ACTIVE_DIR/ModSimData.sh
+        $ACTIVE_DIR/ModARC3.sh
+        $ACTIVE_DIR/ModARC4.sh
+        $ACTIVE_DIR/ModARC5.sh
+        $ACTIVE_DIR/ModARC7.sh
+        $ACTIVE_DIR/ModARC9.sh
+        $ACTIVE_DIR/ModSESSION.sh
+        $ACTIVE_DIR/TestReport.sh
         exit 0
     fi
 fi
