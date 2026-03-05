@@ -77,6 +77,8 @@ for ((i=1; i<=$arcnums; i++)); do
 
     IFS=';' read -r -a arr <<< "$line"
 
+if [[ "$VER_PROTOCOL" != 0 ]]; then
+
    # берём данные из archives.event_changearc
     export PGPASSWORD=$Password
     value_details=$(psql -U $Login -h $Host -d $Name -p $Port -tA -c "SELECT value_details FROM archives.event_changearc
@@ -120,11 +122,42 @@ for ((i=1; i<=$arcnums; i++)); do
     F_SUPPLIERSTATE=${arr[4]}
     F_SOURCECODE=${arr[5]}
 
-    F_value_old=${arr[7]}
-    F_value_new=${arr[8]}
+    F_value_old=$(echo "${arr[7]}" | sed 's/[[:space:]]*$//')
+    F_value_new=$(echo "${arr[8]}" | sed 's/[[:space:]]*$//')
     F_LKG=${arr[9]}
     F_BODYSTATE=$(echo "${arr[10]}" | sed 's/[[:space:]]*$//')
+else
+    # берём данные из archives.event_changearc
+     export PGPASSWORD=$Password
+     value_details=$(psql -U $Login -h $Host -d $Name -p $Port -tA -c "SELECT value_details FROM archives.event_changearc
+     where device_id  = $device_id and arcnum = ${arr[0]};")
+     unset PGPASSWORD
+     #BODYSTATE=$(echo "$value_details" | jq -r '.BODYSTATE')
+     KALIBSTATE=$(echo "$value_details" | jq -r '.KALIBSTATE')
+     SOURCECODE=$(echo "$value_details" | jq -r '.SOURCECODE')
+     #SUPPLIERSTATE=$(echo "$value_details" | jq -r '.SUPPLIERSTATE')
+     export PGPASSWORD=$Password
+     devdate=$(psql -U $Login -h $Host -d $Name -p $Port -tA -c "SELECT devdate FROM archives.event_changearc
+     where device_id  = $device_id and arcnum = ${arr[0]};")
+     unset PGPASSWORD
+     devdate=$(date -d "$devdate" +"%d.%m.%Y %H:%M:%S")
+     export PGPASSWORD=$Password
+     value_old=$(psql -U $Login -h $Host -d $Name -p $Port -tA -c "SELECT value_old FROM archives.event_changearc
+     where device_id  = $device_id and arcnum = ${arr[0]};")
+     unset PGPASSWORD
+     export PGPASSWORD=$Password
+     value_new=$(psql -U $Login -h $Host -d $Name -p $Port -tA -c "SELECT value_new FROM archives.event_changearc
+     where device_id  = $device_id and arcnum = ${arr[0]};")
+     unset PGPASSWORD
 
+     F_devdate=$(echo "${arr[1]}" | sed 's/,/ /g')
+     F_KALIBSTATE=${arr[2]}
+     #F_MANUFACTURERSTATE=${arr[4]}
+     #F_SUPPLIERSTATE=${arr[4]}
+     F_SOURCECODE=${arr[3]}
+     F_value_old=$(echo "${arr[5]}" | sed 's/[[:space:]]*$//')
+     F_value_new=$(echo "${arr[6]}" | sed 's/[[:space:]]*$//')
+fi
 
     echo "arcnum: ${arr[0]}"
     echo ""
@@ -147,7 +180,8 @@ for ((i=1; i<=$arcnums; i++)); do
     fi
 
     sleep 0.05
-    if echo "$F_value_old" | grep -wq "$value_old"; then
+    #if echo "$F_value_old" | grep -wq "$value_old"; then
+    if [[ $F_value_old ==  $value_old ]]; then
         echo "VALUE_OLD"
         echo -e "${GREEN}F: $F_value_old${NC}"
         echo -e "${GREEN}B: $value_old${NC}"
@@ -164,7 +198,8 @@ for ((i=1; i<=$arcnums; i++)); do
     fi
 
     sleep 0.05
-    if echo "$F_value_new" | grep -wq "$value_new"; then
+    #if echo "$F_value_new" | grep -wq "$value_new"; then
+    if [[ $F_value_new ==  $value_new ]]; then
         echo "VALUE_NEW"
         echo -e "${GREEN}F: $F_value_new${NC}"
         echo -e "${GREEN}B: $value_new${NC}"

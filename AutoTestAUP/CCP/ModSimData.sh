@@ -9,7 +9,7 @@ DATE_STR=$(date +"%d.%m.%Y")
 # ищем "sgs.json"
 FILE_SGS_JSON=$(find /opt -type f -name "sgs.json" 2>/dev/null)
 if [ -z "$FILE_SGS_JSON" ]; then
-     echo "$Файл sgs.json не найден!"
+     echo "Файл sgs.json не найден!"
      exit 0
 fi
 

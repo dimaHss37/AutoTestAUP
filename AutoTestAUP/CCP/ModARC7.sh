@@ -50,16 +50,6 @@ fi
 # Путь к обрабатываемому файлу
 TARGET="$ACTIVE_DIR/rdt/$NAME_FILE"
 
-#VER_PROTOCOL !
-VER_PROTOCOL=$(cat $TARGET | grep protocol -i | grep -o '[0-9]\+')
-if [[ -z "$VER_PROTOCOL" ]]; then
-    VER_PROTOCOL=0
-fi
-#if [[ "$VER_PROTOCOL" != 0 ]]; then
-#    echo "Версия протокола: $VER_PROTOCOL"
-#    exit 0
-#fi
-
 DATE_STR=$(date +"%d.%m.%Y")
 # запись в log
 echo "[ARCHIVE7]" >> $LOG
@@ -77,6 +67,8 @@ if [[ -z "$ARCHIVE7" ]]; then
     exit 0
 fi
 
+
+
 arcnums=$(echo "$ARCHIVE7" | wc -l)
 
 # запись в log
@@ -91,6 +83,48 @@ for ((i=1; i<=$arcnums; i++)); do
 
     IFS=';' read -r -a arr <<< "$line"
 
+
+if [[ "$VER_PROTOCOL" == 0 ]] && [[ -n "$VERS_S" ]]; then
+    export PGPASSWORD=$Password
+    devdate=$(psql -U $Login -h $Host -d $Name -p $Port -tA -c "SELECT devdate FROM archives.intarc
+    where flow_id = $flow_id and inttype = 2 and arcnum = ${arr[0]};")
+    unset PGPASSWORD
+    devdate=$(date -d "$devdate" +"%d.%m.%Y %H:%M:%S")
+
+    export PGPASSWORD=$Password
+    arcdata=$(psql -U $Login -h $Host -d $Name -p $Port -tA -c "SELECT arcdata FROM archives.intarc
+    where flow_id = $flow_id and inttype = 2 and arcnum = ${arr[0]};")
+    unset PGPASSWORD
+
+    VSTOT=$(echo "$arcdata" | jq -r '.VSTOT')
+    T=$(echo "$arcdata" | jq -r '.T')
+        if [[ $T =~ ^[0-9]+\.[0-9]$ ]]; then
+           T=$(echo "${T}0")
+        fi
+    K=$(echo "$arcdata" | jq -r '.K')
+    TMRSTATE=$(echo "$arcdata" | jq -r '.TMRSTATE')
+    VSUND=$(echo "$arcdata" | jq -r '.VSUND')
+
+    F_devdate=$(echo "${arr[1]}" | sed 's/,/ /g')
+    F_VSTOT=$(echo "scale=4; ${arr[2]} * $VOLUME_PULSE" | bc)
+        if [[ "$F_VSTOT" == *0 ]]; then
+            F_VSTOT=$(echo "$F_VSTOT" | sed 's/0*$//')
+        fi
+        if [[ "$F_VSTOT" == .* ]]; then
+            F_VSTOT="0$F_VSTOT"
+        fi
+        if [ -z "$F_VSTOT" ]; then
+            F_VSTOT=0
+        fi
+    F_TMRSTATE=$(printf "%d" 0x"${arr[3]}" 2>/dev/null)
+    F_T=${arr[4]}
+    if [[ "$F_T" == *0 ]] && [[ "$T" != *0 ]]; then
+        F_T=$(echo "$F_T" | sed 's/\.0$//; s/\([0-9]\+\.[0-9]*[1-9]\)0$/\1/')
+    fi
+    F_K=$(echo "${arr[5]}" | grep -oE '[0-9]+')
+    F_VSUND=$F_VSTOT
+
+else
         export PGPASSWORD=$Password
         devdate=$(psql -U $Login -h $Host -d $Name -p $Port -tA -c "SELECT devdate FROM archives.intarc
         where flow_id = $flow_id and inttype = 2 and arcnum = ${arr[0]};")
@@ -136,6 +170,12 @@ for ((i=1; i<=$arcnums; i++)); do
                 F_VSTOT=0
             fi
         F_T=${arr[3]}
+        if [[ "$F_T" == *0 ]] && [[ "$T" != *0 ]]; then
+            F_T=$(echo "$F_T" | sed 's/0*$//;s/\.$//')
+        fi
+        if [[ "$F_T" == *00 ]]; then
+            F_T=$(echo "$F_T" | sed 's/\..*//')
+        fi
         F_T_OUT=${arr[4]}
         if [[ "$F_T_OUT" == *"0" ]]; then
             F_T_OUT="${F_T_OUT%0}"
@@ -161,7 +201,7 @@ for ((i=1; i<=$arcnums; i++)); do
         fi
 
         if [ -n "${arr[10]}" ]; then
-            F_LASTHOURARCNUM=${arr[10]}
+            F_LASTHOURARCNUM=$(echo "${arr[10]}" | sed 's/[[:space:]]*$//')
         else
             F_LASTHOURARCNUM="null"
         fi
@@ -178,7 +218,7 @@ for ((i=1; i<=$arcnums; i++)); do
                     F_VSUND=0
                 fi
         else
-            F_VSUND=$VSTOT
+            F_VSUND=$F_VSTOT
         fi
 
         if [ -n "${arr[13]}" ]; then
@@ -193,14 +233,16 @@ for ((i=1; i<=$arcnums; i++)); do
             F_VALVESTATE="null"
         fi
 
-        F_BATTERY_PERCENT=$(echo "scale=2; ${arr[16]} / 100" | bc)
+        F_BATTERY_PERCENT=$(echo "scale=2; ${arr[16]} / 100" | bc 2>/dev/null)
         if [[ "$F_BATTERY_PERCENT" == *"0" ]]; then
             F_BATTERY_PERCENT="${F_BATTERY_PERCENT%0}"
         fi
 
-        F_BATTERY_PERCENT_INPUT=$(echo "${arr[17]}" | grep -oE '[0-9]+')
-        F_BATTERY_PERCENT_INPUT=$(echo "scale=2; $F_BATTERY_PERCENT_INPUT / 100" | bc | sed 's/\.*0*$//')
-
+        F_BATTERY_PERCENT_INPUT=$(echo "${arr[17]}" | grep -oE '[0-9]+' 2>/dev/null)
+        F_BATTERY_PERCENT_INPUT=$(echo "scale=2; $F_BATTERY_PERCENT_INPUT / 100" | bc | sed 's/\.*0*$//' 2>/dev/null)
+        if [[ "$F_BATTERY_PERCENT_INPUT" == *"0" ]] && [[ "$F_BATTERY_PERCENT_INPUT" != 100 ]]; then
+            F_BATTERY_PERCENT_INPUT="${F_BATTERY_PERCENT_INPUT%0}"
+        fi
 
     #    [0] 	arcnum
     #    [1] 	devdate
@@ -220,13 +262,15 @@ for ((i=1; i<=$arcnums; i++)); do
     #    [15]	VALVESTATE
     #    [16]	BATTERY_PERCENT
     #    [17]	BATTERY_PERCENT_INPUT
-
     #
     #          	RPUSTATE
     #          	SENSORSTATE_PR
     #          	VALVESTATE_PR
     #          	VSUND
 
+
+
+fi
 
 
 
@@ -268,7 +312,7 @@ for ((i=1; i<=$arcnums; i++)); do
         fi
 
          sleep 0.03
-         if echo "$F_T" | grep -wq "$T"; then
+         if [ "$F_T" = "$T" ]; then
              echo "T"
              echo -e "${GREEN}F: $F_T${NC}"
              echo -e "${GREEN}B: $T${NC}"
@@ -293,7 +337,7 @@ for ((i=1; i<=$arcnums; i++)); do
              TIME_STR=$(date +"%H:%M:%S")
              echo "[$DATE_STR][$TIME_STR][$MOD][$MODULE_NAME][Passed][Запись: ${arr[0]} K: FILE -> $F_K DB -> $K значения совпали]" >> $LOG
          else
-             echo "TMRSTATE"
+             echo "K"
              echo -e "${RED}F: $F_K${NC}"
              echo -e "${RED}B: $K${NC}"
              # запись в log

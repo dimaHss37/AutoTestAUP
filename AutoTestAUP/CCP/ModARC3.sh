@@ -77,26 +77,65 @@ echo "[$DATE_STR][$TIME_STR][$MOD][$MODULE_NAME][Количество запис
 for ((i=1; i<=$arcnums; i++)); do
     ind="NR==$i"
     line=$(echo "$ARCHIVE3" | awk $ind)
-    values=$(echo "$line" | grep -o ";" | wc -l)
-    values=$((values + 1))
 
     IFS=';' read -r -a arr <<< "$line"
 
-        export PGPASSWORD=$Password
-        devdate=$(psql -U $Login -h $Host -d $Name -p $Port -tA -c "SELECT devdate FROM archives.intarc
-        where flow_id = $flow_id and arcnum = ${arr[0]};")
-        unset PGPASSWORD
-        devdate=$(date -d "$devdate" +"%d.%m.%Y %H:%M:%S")
+export PGPASSWORD=$Password
+devdate=$(psql -U $Login -h $Host -d $Name -p $Port -tA -c "SELECT devdate FROM archives.intarc
+where flow_id = $flow_id and arcnum = ${arr[0]};")
+unset PGPASSWORD
+devdate=$(date -d "$devdate" +"%d.%m.%Y %H:%M:%S" 2>/dev/null)
 
-        export PGPASSWORD=$Password
-        arcdata=$(psql -U $Login -h $Host -d $Name -p $Port -tA -c "SELECT arcdata FROM archives.intarc
-        where flow_id = $flow_id and arcnum = ${arr[0]};")
-        unset PGPASSWORD
+export PGPASSWORD=$Password
+arcdata=$(psql -U $Login -h $Host -d $Name -p $Port -tA -c "SELECT arcdata FROM archives.intarc
+where flow_id = $flow_id and arcnum = ${arr[0]};")
+unset PGPASSWORD
 
+if [[ "$VER_PROTOCOL" == 0 ]] && [[ -n "$VERS_S" ]]; then
+    VSTOT=$(echo "$arcdata" | jq -r '.VSTOT')
+    T=$(echo "$arcdata" | jq -r '.T')
+    if [[ $T =~ ^[0-9]+\.[0-9]$ ]]; then
+            T=$(echo "${T}0")
+    fi
+    T_OUT=$(echo "$arcdata" | jq -r '.T_OUT')
+    K=$(echo "$arcdata" | jq -r '.K')
+    TMRSTATE=$(echo "$arcdata" | jq -r '.TMRSTATE')
+    WARNINGSTATE=$(echo "$arcdata" | jq -r '.WARNINGSTATE')
+    CRASHSTATE=$(echo "$arcdata" | jq -r '.CRASHSTATE')
+    EVENTCODE=$(echo "$arcdata" | jq -r '.EVENTCODE')
+    VSTOT=$(echo "$arcdata" | jq -r '.VSTOT')
+    SENSORSTATE=$(echo "$arcdata" | jq -r '.SENSORSTATE')
+    VALVESTATE=$(echo "$arcdata" | jq -r '.VALVESTATE')
+    ALARMSTATE=$(echo "$arcdata" | jq -r '.ALARMSTATE')
+    VSUND=$(echo "$arcdata" | jq -r '.VSUND')
+
+    F_devdate=$(echo "${arr[1]}" | sed 's/,/ /g')
+    F_VSTOT=$(echo "scale=4; ${arr[2]} * $VOLUME_PULSE" | bc)
+    if [[ "$F_VSTOT" == *0 ]]; then
+        F_VSTOT=$(echo "$F_VSTOT" | sed 's/0*$//')
+    fi
+    if [[ "$F_VSTOT" == .* ]]; then
+        F_VSTOT="0$F_VSTOT"
+    fi
+    if [ -z "$F_VSTOT" ]; then
+        F_VSTOT=0
+    fi
+    F_T=${arr[3]}
+    if [[ "$F_T" == *0 ]] && [[ "$T" != *0 ]]; then
+        F_T=$(echo "$F_T" | sed 's/0*$//;s/\.$//')
+    fi
+    if [[ "$F_T" == *0 ]] && [[ "$T" != *0 ]]; then
+        F_T=$(echo "$F_T" | sed 's/\.0$//; s/\([0-9]\+\.[0-9]*[1-9]\)0$/\1/')
+    fi
+    F_T_OUT=${arr[4]}
+    F_K=${arr[5]}
+    F_VSUND=$F_VSTOT
+
+else
         VSTOT=$(echo "$arcdata" | jq -r '.VSTOT')
         T=$(echo "$arcdata" | jq -r '.T')
         if [[ $T =~ ^[0-9]+\.[0-9]$ ]]; then
-                T=$(echo "${T}0")
+            T=$(echo "${T}0")
         fi
         T_OUT=$(echo "$arcdata" | jq -r '.T_OUT')
         K=$(echo "$arcdata" | jq -r '.K')
@@ -128,44 +167,54 @@ for ((i=1; i<=$arcnums; i++)); do
             fi
 
         F_T=${arr[3]}
+        if [[ "$F_T" == *0 ]] && [[ "$T" != *0 ]]; then
+            F_T=$(echo "$F_T" | sed 's/0*$//;s/\.$//')
+        fi
+        if [[ "$F_T" == *0 ]] && [[ "$T" != *0 ]]; then
+            F_T=$(echo "$F_T" | sed 's/\.0$//; s/\([0-9]\+\.[0-9]*[1-9]\)0$/\1/')
+        fi
+
+
         F_T_OUT=${arr[4]}
         F_K=${arr[5]}
         F_TMRSTATE=$(printf "%d" 0x"${arr[6]}" 2>/dev/null)
         F_WARNINGSTATE=$(printf "%d" 0x"${arr[7]}" 2>/dev/null)
         F_CRASHSTATE=$(printf "%d" 0x"${arr[9]}" 2>/dev/null)
-        #F_EVENTCODE=$(printf "%d" 0x"${arr[10]}" 2>/dev/null)
         F_EVENTCODE=$((16#${arr[10]}))
         F_VSUND=$(echo "${arr[12]}" | grep -oE '[0-9]+')
-        F_VSUND=$(echo "scale=4; $F_VSUND * $VOLUME_PULSE" | bc)
+        F_VSUND=$(echo "scale=4; $F_VSUND * $VOLUME_PULSE" | bc 2>/dev/null)
             if [[ "$F_VSUND" == *0 ]]; then
-                F_VSUND=$(echo "$F_VSUND" | sed 's/0*$//')
+                F_VSUND=$(echo "$F_VSUND" | sed 's/0*$//' 2>/dev/null)
             fi
             if [[ "$F_VSUND" == .* ]]; then
                 F_VSUND="0$F_VSUND"
             fi
             if [ -z "$F_VSUND" ]; then
-                F_VSUND=0
+                F_VSUND=$F_VSTOT
             fi
 
         F_SENSORSTATE=${arr[13]}
         if [ -z "$F_SENSORSTATE" ]; then
-            F_SENSORSTATE="null"
+            F_SENSORSTATE=""
         else
             F_SENSORSTATE=$(printf "%d" 0x"${arr[13]}" 2>/dev/null)
         fi
-        F_VALVESTATE=$(echo "${arr[15]}" | grep -oE '[0-9]+')
-        if [ -z "$F_VALVESTATE" ]; then
-            F_VALVESTATE="null"
-        fi
+        F_VALVESTATE=$(echo "${arr[15]}" | grep -oE '[0-9]+' 2>/dev/null)
 
-        F_BATTERY_PERCENT=$(echo "scale=2; ${arr[16]} / 100" | bc)
+        F_BATTERY_PERCENT=$(echo "scale=2; ${arr[16]} / 100" | bc 2>/dev/null)
+
         if [[ "$F_BATTERY_PERCENT" == *"0" ]]; then
             F_BATTERY_PERCENT="${F_BATTERY_PERCENT%0}"
         fi
 
-        F_BATTERY_PERCENT_INPUT=$(echo "${arr[17]}" | grep -oE '[0-9]+')
-        F_BATTERY_PERCENT_INPUT=$(echo "scale=2; $F_BATTERY_PERCENT_INPUT / 100" | bc)
+        F_BATTERY_PERCENT_INPUT=$(echo "${arr[17]}" | grep -oE '[0-9]+' 2>/dev/null)
+        F_BATTERY_PERCENT_INPUT=$(echo "scale=2; $F_BATTERY_PERCENT_INPUT / 100" | bc | sed 's/\.*0*$//' 2>/dev/null)
+        if [[ "$F_BATTERY_PERCENT_INPUT" == *"0" ]] && [[ "$F_BATTERY_PERCENT_INPUT" != 100 ]]; then
+            F_BATTERY_PERCENT_INPUT="${F_BATTERY_PERCENT_INPUT%0}"
+        fi
 
+
+fi
 
         echo "arcnum: ${arr[0]}"
         echo ""
@@ -205,7 +254,7 @@ for ((i=1; i<=$arcnums; i++)); do
         fi
 
          sleep 0.03
-         if echo "$F_T" | grep -wq "$T"; then
+         if [ "$F_T" = "$T" ]; then
              echo "T"
              echo -e "${GREEN}F: $F_T${NC}"
              echo -e "${GREEN}B: $T${NC}"
@@ -230,7 +279,7 @@ for ((i=1; i<=$arcnums; i++)); do
              TIME_STR=$(date +"%H:%M:%S")
              echo "[$DATE_STR][$TIME_STR][$MOD][$MODULE_NAME][Passed][Запись: ${arr[0]} K: FILE -> $F_K DB -> $K значения совпали]" >> $LOG
          else
-             echo "TMRSTATE"
+             echo "K"
              echo -e "${RED}F: $F_K${NC}"
              echo -e "${RED}B: $K${NC}"
              # запись в log
@@ -255,6 +304,7 @@ for ((i=1; i<=$arcnums; i++)); do
             echo "[$DATE_STR][$TIME_STR][$MOD][$MODULE_NAME][Failed][Запись: ${arr[0]} TMRSTATE: FILE -> $F_TMRSTATE DB -> $TMRSTATE значения не совпали]" >> $LOG
         fi
 
+    if [ -n "$F_WARNINGSTATE" ]; then
         sleep 0.03
         if echo "$F_WARNINGSTATE" | grep -wq "$WARNINGSTATE"; then
             echo "WARNINGSTATE"
@@ -271,7 +321,9 @@ for ((i=1; i<=$arcnums; i++)); do
             TIME_STR=$(date +"%H:%M:%S")
             echo "[$DATE_STR][$TIME_STR][$MOD][$MODULE_NAME][Failed][Запись: ${arr[0]} WARNINGSTATE: FILE -> $F_WARNINGSTATE DB -> $WARNINGSTATE значения не совпали]" >> $LOG
         fi
+    fi
 
+    if [ -n "$F_CRASHSTATE" ]; then
         sleep 0.03
         if echo "$F_CRASHSTATE" | grep -wq "$CRASHSTATE"; then
             echo "CRASHSTATE"
@@ -288,7 +340,9 @@ for ((i=1; i<=$arcnums; i++)); do
             TIME_STR=$(date +"%H:%M:%S")
             echo "[$DATE_STR][$TIME_STR][$MOD][$MODULE_NAME][Failed][Запись: ${arr[0]} CRASHSTATE: FILE -> $F_CRASHSTATE DB -> $CRASHSTATE значения не совпали]" >> $LOG
         fi
+    fi
 
+    if [ -n "$F_EVENTCODE" ]; then
         sleep 0.03
         if [[ "$F_EVENTCODE" == "$EVENTCODE" ]]; then
             echo "EVENTCODE"
@@ -305,6 +359,7 @@ for ((i=1; i<=$arcnums; i++)); do
             TIME_STR=$(date +"%H:%M:%S")
             echo "[$DATE_STR][$TIME_STR][$MOD][$MODULE_NAME][Failed][Запись: ${arr[0]} EVENTCODE: FILE -> $F_EVENTCODE DB -> $EVENTCODE значения не совпали]" >> $LOG
         fi
+    fi
 
         sleep 0.03
         if [[ "$F_VSUND" == "$VSUND" ]]; then
@@ -323,6 +378,7 @@ for ((i=1; i<=$arcnums; i++)); do
             echo "[$DATE_STR][$TIME_STR][$MOD][$MODULE_NAME][Failed][Запись: ${arr[0]} VSUND: FILE -> $F_VSUND DB -> $VSUND значения не совпали]" >> $LOG
         fi
 
+    if [ -n "$F_SENSORSTATE" ]; then
         sleep 0.03
         if [[ "$F_SENSORSTATE" == "$SENSORSTATE" ]]; then
             echo "SENSORSTATE"
@@ -339,7 +395,9 @@ for ((i=1; i<=$arcnums; i++)); do
             TIME_STR=$(date +"%H:%M:%S")
             echo "[$DATE_STR][$TIME_STR][$MOD][$MODULE_NAME][Failed][Запись: ${arr[0]} SENSORSTATE: FILE -> $F_SENSORSTATE DB -> $SENSORSTATE значения не совпали]" >> $LOG
         fi
+    fi
 
+    if [ -n "$F_VALVESTATE" ]; then
         sleep 0.03
         if echo "$F_VALVESTATE" | grep -wq "$VALVESTATE"; then
             echo "VALVESTATE"
@@ -356,6 +414,7 @@ for ((i=1; i<=$arcnums; i++)); do
             TIME_STR=$(date +"%H:%M:%S")
             echo "[$DATE_STR][$TIME_STR][$MOD][$MODULE_NAME][Failed][Запись: ${arr[0]} VALVESTATE: FILE -> $F_VALVESTATE DB -> $VALVESTATE значения не совпали]" >> $LOG
         fi
+    fi
 
     if [ -n "$F_BATTERY_PERCENT" ]; then
         sleep 0.03
