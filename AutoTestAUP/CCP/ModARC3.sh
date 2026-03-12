@@ -94,9 +94,7 @@ unset PGPASSWORD
 if [[ "$VER_PROTOCOL" == 0 ]] && [[ -n "$VERS_S" ]]; then
     VSTOT=$(echo "$arcdata" | jq -r '.VSTOT')
     T=$(echo "$arcdata" | jq -r '.T')
-    if [[ $T =~ ^[0-9]+\.[0-9]$ ]]; then
-            T=$(echo "${T}0")
-    fi
+    T=$(echo "scale=2; $T / 1" | bc)
     T_OUT=$(echo "$arcdata" | jq -r '.T_OUT')
     K=$(echo "$arcdata" | jq -r '.K')
     TMRSTATE=$(echo "$arcdata" | jq -r '.TMRSTATE')
@@ -121,12 +119,6 @@ if [[ "$VER_PROTOCOL" == 0 ]] && [[ -n "$VERS_S" ]]; then
         F_VSTOT=0
     fi
     F_T=${arr[3]}
-    if [[ "$F_T" == *0 ]] && [[ "$T" != *0 ]]; then
-        F_T=$(echo "$F_T" | sed 's/0*$//;s/\.$//')
-    fi
-    if [[ "$F_T" == *0 ]] && [[ "$T" != *0 ]]; then
-        F_T=$(echo "$F_T" | sed 's/\.0$//; s/\([0-9]\+\.[0-9]*[1-9]\)0$/\1/')
-    fi
     F_T_OUT=${arr[4]}
     F_K=${arr[5]}
     F_VSUND=$F_VSTOT
@@ -134,9 +126,7 @@ if [[ "$VER_PROTOCOL" == 0 ]] && [[ -n "$VERS_S" ]]; then
 else
         VSTOT=$(echo "$arcdata" | jq -r '.VSTOT')
         T=$(echo "$arcdata" | jq -r '.T')
-        if [[ $T =~ ^[0-9]+\.[0-9]$ ]]; then
-            T=$(echo "${T}0")
-        fi
+        T=$(echo "scale=2; $T / 1" | bc)
         T_OUT=$(echo "$arcdata" | jq -r '.T_OUT')
         K=$(echo "$arcdata" | jq -r '.K')
         TMRSTATE=$(echo "$arcdata" | jq -r '.TMRSTATE')
@@ -167,14 +157,6 @@ else
             fi
 
         F_T=${arr[3]}
-        if [[ "$F_T" == *0 ]] && [[ "$T" != *0 ]]; then
-            F_T=$(echo "$F_T" | sed 's/0*$//;s/\.$//')
-        fi
-        if [[ "$F_T" == *0 ]] && [[ "$T" != *0 ]]; then
-            F_T=$(echo "$F_T" | sed 's/\.0$//; s/\([0-9]\+\.[0-9]*[1-9]\)0$/\1/')
-        fi
-
-
         F_T_OUT=${arr[4]}
         F_K=${arr[5]}
         F_TMRSTATE=$(printf "%d" 0x"${arr[6]}" 2>/dev/null)
@@ -254,7 +236,8 @@ fi
         fi
 
          sleep 0.03
-         if [ "$F_T" = "$T" ]; then
+         if echo "$F_T" | grep -wq "$T"; then
+         #if [ "$F_T" == "$T" ]; then
              echo "T"
              echo -e "${GREEN}F: $F_T${NC}"
              echo -e "${GREEN}B: $T${NC}"

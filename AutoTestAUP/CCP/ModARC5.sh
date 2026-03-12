@@ -121,7 +121,6 @@ if [[ "$VER_PROTOCOL" != 0 ]]; then
     F_MANUFACTURERSTATE=${arr[3]}
     F_SUPPLIERSTATE=${arr[4]}
     F_SOURCECODE=${arr[5]}
-
     F_value_old=$(echo "${arr[7]}" | sed 's/[[:space:]]*$//')
     F_value_new=$(echo "${arr[8]}" | sed 's/[[:space:]]*$//')
     F_LKG=${arr[9]}

@@ -98,9 +98,7 @@ if [[ "$VER_PROTOCOL" == 0 ]] && [[ -n "$VERS_S" ]]; then
 
     VSTOT=$(echo "$arcdata" | jq -r '.VSTOT')
     T=$(echo "$arcdata" | jq -r '.T')
-        if [[ $T =~ ^[0-9]+\.[0-9]$ ]]; then
-           T=$(echo "${T}0")
-        fi
+    T=$(echo "scale=2; $T / 1" | bc)
     K=$(echo "$arcdata" | jq -r '.K')
     TMRSTATE=$(echo "$arcdata" | jq -r '.TMRSTATE')
     VSUND=$(echo "$arcdata" | jq -r '.VSUND')
@@ -118,9 +116,6 @@ if [[ "$VER_PROTOCOL" == 0 ]] && [[ -n "$VERS_S" ]]; then
         fi
     F_TMRSTATE=$(printf "%d" 0x"${arr[3]}" 2>/dev/null)
     F_T=${arr[4]}
-    if [[ "$F_T" == *0 ]] && [[ "$T" != *0 ]]; then
-        F_T=$(echo "$F_T" | sed 's/\.0$//; s/\([0-9]\+\.[0-9]*[1-9]\)0$/\1/')
-    fi
     F_K=$(echo "${arr[5]}" | grep -oE '[0-9]+')
     F_VSUND=$F_VSTOT
 
@@ -138,9 +133,7 @@ else
 
         VSTOT=$(echo "$arcdata" | jq -r '.VSTOT')
         T=$(echo "$arcdata" | jq -r '.T')
-        if [[ $T =~ ^[0-9]+\.[0-9]$ ]]; then
-                T=$(echo "${T}0")
-        fi
+        T=$(echo "scale=2; $T / 1" | bc)
         #T_OUT=$(echo "$arcdata" | jq -r '.T_OUT')
         K=$(echo "$arcdata" | jq -r '.K')
         TMRSTATE=$(echo "$arcdata" | jq -r '.TMRSTATE')
@@ -170,12 +163,6 @@ else
                 F_VSTOT=0
             fi
         F_T=${arr[3]}
-        if [[ "$F_T" == *0 ]] && [[ "$T" != *0 ]]; then
-            F_T=$(echo "$F_T" | sed 's/0*$//;s/\.$//')
-        fi
-        if [[ "$F_T" == *00 ]]; then
-            F_T=$(echo "$F_T" | sed 's/\..*//')
-        fi
         F_T_OUT=${arr[4]}
         if [[ "$F_T_OUT" == *"0" ]]; then
             F_T_OUT="${F_T_OUT%0}"

@@ -397,7 +397,7 @@ else
 fi
 
     # Получения значения из БД
-    export PGPASSWORD=$Password
+export PGPASSWORD=$Password
 DB_VERS=$(psql -U $Login -h $Host -p $Port -d $Name -tA -c "select value from info_params.device_info_params
 where device_id=$device_id and attribute_id=29;")
 unset PGPASSWORD
@@ -518,7 +518,6 @@ export PGPASSWORD=$Password
 DB_VOLUME_PULSE=$(psql -U $Login -d $Name -h $Host -p $Port -tA -c "select value from info_params.device_info_params
 where device_id=$device_id and attribute_id=103;")
 unset PGPASSWORD
-
 
 if [ -z ${arr[$i]} ]; then
     VOLUME_PULSE=0.001
@@ -3138,10 +3137,10 @@ else
 fi
 
 # 56 GAS_MON    //газовый месяц
-# export PGPASSWORD=$Password
-#DB_GAS_MON=$(psql -U $Login -h $Host -p $Port -d $Name -tA -c "select value from info_params.device_info_params
-#where device_id=$device_id and attribute_id=2683;")
-# unset PGPASSWORD
+export PGPASSWORD=$Password
+DB_GAS_MON=$(psql -U $Login -h $Host -p $Port -d $Name -tA -c "select value from info_params.device_info_params
+where device_id=$device_id and attribute_id=4820;")
+unset PGPASSWORD
 GAS_MON=${arr[$i]}
 STR1="GAS_MON: ${arr[$i]}"
 STR2="GAS_MON: $DB_GAS_MON"
@@ -3175,12 +3174,12 @@ else
 fi
 
 # 57 LASTMONARCNUM  //последний номер арх. месячного
-# export PGPASSWORD=$Password
-#DB_LASTMONARCNUM=$(psql -U $Login -h $Host -p $Port -d $Name -tA -c "select value from info_params.device_info_params
-#where device_id=$device_id and attribute_id=2683;")
-# unset PGPASSWORD
-LASTMONARCNUM=${arr[$i]}
-STR1="LASTMONARCNUM: ${arr[$i]}"
+export PGPASSWORD=$Password
+DB_LASTMONARCNUM=$(psql -U $Login -h $Host -p $Port -d $Name -tA -c "select value from info_params.device_info_params
+where device_id=$device_id and attribute_id=4819;")
+unset PGPASSWORD
+LASTMONARCNUM=$(echo "${arr[$i]}" | sed 's/[[:space:]]*$//')
+STR1="LASTMONARCNUM: $LASTMONARCNUM"
 STR2="LASTMONARCNUM: $DB_LASTMONARCNUM"
 sleep 0.2
 if echo "$STR1" | grep -wq "$STR2"; then
