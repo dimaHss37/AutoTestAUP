@@ -6,10 +6,25 @@ Passed=$(tac $LOG | sed -n '1,/'$NAME_FILE'/p' | grep "Passed" | wc -l)
 ((Passed--))
 Failed=$(tac $LOG | sed -n '1,/'$NAME_FILE'/p' | grep "Failed" | wc -l)
 ((Failed--))
+end=$(date +%s)
+
 echo ""
 echo -e "\t\e[1mУспешных тестов: $Passed \tПроваленых тестов: $Failed\e[0m"
 echo "" >> $LOG
 echo -e "Успешных тестов: $Passed \tПроваленых тестов: $Failed" >> $LOG
+echo ""
+time=$((end - start))
+if [ "$time" -gt 59 ]; then
+    mins=$(( time / 60 ))
+    secs=$(( time % 60 ))
+    echo -e "\t\e[1mВремя тестирования: ${mins} мин. ${secs} сек.\e[0m"
+    echo "Время тестирования: ${mins} мин. ${secs} сек." >> $LOG
+else
+    echo -e "\t\e[1mВремя тестирования: ${time} сек.\e[0m"
+    echo "Время тестирования: ${time} сек." >> $LOG
+fi
+
+
 
 
 if [[ "$Failed" > 0 ]]; then

@@ -3,6 +3,8 @@
 ACTIVE_DIR=$(dirname "$0")
 MODULE_NAME="ComplexChecParams"
 MOD="TestSystem"
+
+
 # получаем текущую дату
 DATE_STR=$(date +"%d_%m_%Y")
 # формируем имя и путь лог файла
@@ -543,7 +545,7 @@ cat <<EOF
 1. Сервер не запущен
 Симптом: Ошибка вроде Connection refused (соединение отклонено).
 Что делать:
-Проверьте статус службы (в Linux: sudo systemctl status postgresql, в Windows: через «Службы»/Services.msc).
+Проверьте статус службы (в Linux: sudo systemctl status postgresql).
 Используйте утилиту pg_isready, чтобы быстро проверить, принимает ли сервер соединения.
 
 2. Неверные параметры подключения
@@ -586,7 +588,6 @@ cat <<EOF
 Для применения изменений обычно требуется перелогиниться.
 
 Пример: "sudo usermod -aG gazset <пользователь>"
-Узнать имя текущего пользователя: "echo $USER"
 EOF
 fi
 

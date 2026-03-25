@@ -2,14 +2,28 @@
 
 ACTIVE_DIR=$(dirname "$0")
 export ACTIVE_DIR=$ACTIVE_DIR
-# удаляем старые логи (30 дней и старше)
-find $ACTIVE_DIR/log/ -type f -mtime +30 -delete
-# чистим папку "tmp"
-rm -r $ACTIVE_DIR/tmp/* 2>/dev/null
 
-# удаляем все не rdt файлы и папки из папки "rdt"
-find $ACTIVE_DIR/rdt -type f ! -name "*.rdt" -delete
-find $ACTIVE_DIR/rdt -mindepth 1 -type d -exec rm -rf {} +
+if [ ! -d "$ACTIVE_DIR/log/" ]; then
+  mkdir -p "$ACTIVE_DIR/log/"
+else
+    # удаляем старые логи (30 дней и старше)
+    find $ACTIVE_DIR/log/ -type f -mtime +30 -delete
+fi
+
+if [ ! -d "$ACTIVE_DIR/tmp/" ]; then
+    mkdir -p "$ACTIVE_DIR/tmp/"
+else
+    # чистим папку "tmp"
+    rm -r $ACTIVE_DIR/tmp/* 2>/dev/null
+fi
+
+if [ ! -d "$ACTIVE_DIR/rdt/" ]; then
+    mkdir -p "$ACTIVE_DIR/rdt/"
+else
+    # удаляем все не rdt файлы и папки из папки "rdt"
+    find $ACTIVE_DIR/rdt -type f ! -name "*.rdt" -delete
+    find $ACTIVE_DIR/rdt -mindepth 1 -type d -exec rm -rf {} +
+fi
 
 #
 timestamp="$ACTIVE_DIR/tmp/.timestamp.conf"

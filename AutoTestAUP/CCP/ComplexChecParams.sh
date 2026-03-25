@@ -8,6 +8,7 @@ NC="\033[0m" # Без цвета (сброс)
 export RED=$RED
 export GREEN=$GREEN
 export NC=$NC
+export start=$(date +%s)
 
 # ищем "sgs.json"
 FILE_SGS_JSON=$(find /opt -type f -name "sgs.json" 2>/dev/null)
@@ -72,12 +73,7 @@ ACTIVE_DIR=$(dirname "$0")
 export ACTIVE_DIR=$ACTIVE_DIR
 
 # МЕНЮ ВЫБОРА ФАЙЛА
-# принудительное удаление временных файлов
-rm $ACTIVE_DIR/tmp/* 2>/dev/null
-# принудительное создание папок
-mkdir $ACTIVE_DIR/rdt 2>/dev/null
-mkdir $ACTIVE_DIR/tmp 2>/dev/null
-mkdir $ACTIVE_DIR/log 2>/dev/null
+
 # подщёт количества файлов в папке
 files=$(find $ACTIVE_DIR/rdt -type f | wc -l )
 if [[ $files == 0 ]]; then
