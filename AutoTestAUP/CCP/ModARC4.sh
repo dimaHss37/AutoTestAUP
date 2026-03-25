@@ -1,53 +1,6 @@
 #!/bin/bash
 
-# Коды цветов
-RED="\033[31m" # Красный
-GREEN="\033[32m" # Зеленый
-NC="\033[0m" # Без цвета (сброс)
-
-# ищем "sgs.json"
-FILE_SGS_JSON=$(find /opt -type f -name "sgs.json" 2>/dev/null)
-if [ -z "$FILE_SGS_JSON" ]; then
-     echo "$Файл sgs.json не найден!"
-     exit 0
-fi
-
-DatabaseLocation=$(cat $FILE_SGS_JSON | jq -r '.AUPService.DbWriterService.DatabaseLocation')
-
-if [ "$DatabaseLocation" == "Local" ]; then
-    DatabaseType=$(cat $FILE_SGS_JSON | jq -r '.DatabaseConnection.Local.DatabaseType')
-    if [ "$DatabaseType" == "PostgreSQL" ]; then
-        Name=$(cat $FILE_SGS_JSON | jq -r '.DatabaseConnection.Local.PostgreSQL.SGS.Name')
-        Host=$(cat $FILE_SGS_JSON | jq -r '.DatabaseConnection.Local.PostgreSQL.SGS.Host')
-        Port=$(cat $FILE_SGS_JSON | jq -r '.DatabaseConnection.Local.PostgreSQL.SGS.Port')
-        Login=$(cat $FILE_SGS_JSON | jq -r '.DatabaseConnection.Local.PostgreSQL.SGS.Login')
-        Password=$(cat $FILE_SGS_JSON | jq -r '.DatabaseConnection.Local.PostgreSQL.SGS.Password')
-    else
-        echo "Firebird"
-        # Запускаем подменю программы
-        exit 0
-    fi
-else
-    if [ "$DatabaseLocation" == "Server" ]; then
-        DatabaseType=$(cat $FILE_SGS_JSON | jq -r '.DatabaseConnection.Server.DatabaseType')
-        if [ "$DatabaseType" == "PostgreSQL" ]; then
-            Name=$(cat $FILE_SGS_JSON | jq -r '.DatabaseConnection.Server.PostgreSQL.SGS.Name')
-            Host=$(cat $FILE_SGS_JSON | jq -r '.DatabaseConnection.Server.PostgreSQL.SGS.Host')
-            Port=$(cat $FILE_SGS_JSON | jq -r '.DatabaseConnection.Server.PostgreSQL.SGS.Port')
-            Login=$(cat $FILE_SGS_JSON | jq -r '.DatabaseConnection.Server.PostgreSQL.SGS.Login')
-            Password=$(cat $FILE_SGS_JSON | jq -r '.DatabaseConnection.Server.PostgreSQL.SGS.Password')
-        else
-            echo "Firebird"
-            # Запускаем подменю программы
-            exit 0
-        fi
-    else
-        echo "Некорректный sgs.json"
-    fi
-fi
-
-
-DATE_STR=$(date +"%d.%m.%Y")
+TIME_STR=$(date +"%H:%M:%S")
 # запись в log
 echo "[ARCHIVE4]" >> $LOG
 echo "[ARCHIVE4]"
@@ -63,16 +16,12 @@ if [[ -z "$ARCHIVE4" ]]; then
     exit 0
 fi
 
-
-#VER_PROTOCOL
-VER_PROTOCOL=$(cat $TARGET | grep protocol -i | grep -o '[0-9]\+')
-if [[ -z "$VER_PROTOCOL" ]]; then
-    VER_PROTOCOL=0
-fi
-if [[ "$VER_PROTOCOL" != 0 ]]; then
+if [[ $VER_PROTOCOL != 0 ]]; then
+    echo "В файле: $NAME_FILE версия протокола:$VER_PROTOCOL"
+    echo "---------------------------"
+    echo ""
     TIME_STR=$(date +"%H:%M:%S")
-    echo "Версия протокола: $VER_PROTOCOL" >> $LOG
-    echo "Версия протокола: $VER_PROTOCOL"
+    echo "[$DATE_STR][$TIME_STR][$MOD][$MODULE_NAME][В тестируемом файле версия протокола:$VER_PROTOCOL]" >> $LOG
     exit 0
 fi
 

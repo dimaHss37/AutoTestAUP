@@ -1,58 +1,6 @@
 #!/bin/bash
 
-# Коды цветов
-RED="\033[31m" # Красный
-GREEN="\033[32m" # Зеленый
-NC="\033[0m" # Без цвета (сброс)
-
-# ищем "sgs.json"
-FILE_SGS_JSON=$(find /opt -type f -name "sgs.json" 2>/dev/null)
-if [ -z "$FILE_SGS_JSON" ]; then
-     echo "$Файл sgs.json не найден!"
-     exit 0
-fi
-
-DatabaseLocation=$(cat $FILE_SGS_JSON | jq -r '.AUPService.DbWriterService.DatabaseLocation')
-
-if [ "$DatabaseLocation" == "Local" ]; then
-    DatabaseType=$(cat $FILE_SGS_JSON | jq -r '.DatabaseConnection.Local.DatabaseType')
-    if [ "$DatabaseType" == "PostgreSQL" ]; then
-        Name=$(cat $FILE_SGS_JSON | jq -r '.DatabaseConnection.Local.PostgreSQL.SGS.Name')
-        Host=$(cat $FILE_SGS_JSON | jq -r '.DatabaseConnection.Local.PostgreSQL.SGS.Host')
-        Port=$(cat $FILE_SGS_JSON | jq -r '.DatabaseConnection.Local.PostgreSQL.SGS.Port')
-        Login=$(cat $FILE_SGS_JSON | jq -r '.DatabaseConnection.Local.PostgreSQL.SGS.Login')
-        Password=$(cat $FILE_SGS_JSON | jq -r '.DatabaseConnection.Local.PostgreSQL.SGS.Password')
-    else
-        echo "Firebird"
-        # Запускаем подменю программы
-        exit 0
-    fi
-else
-    if [ "$DatabaseLocation" == "Server" ]; then
-        DatabaseType=$(cat $FILE_SGS_JSON | jq -r '.DatabaseConnection.Server.DatabaseType')
-        if [ "$DatabaseType" == "PostgreSQL" ]; then
-            Name=$(cat $FILE_SGS_JSON | jq -r '.DatabaseConnection.Server.PostgreSQL.SGS.Name')
-            Host=$(cat $FILE_SGS_JSON | jq -r '.DatabaseConnection.Server.PostgreSQL.SGS.Host')
-            Port=$(cat $FILE_SGS_JSON | jq -r '.DatabaseConnection.Server.PostgreSQL.SGS.Port')
-            Login=$(cat $FILE_SGS_JSON | jq -r '.DatabaseConnection.Server.PostgreSQL.SGS.Login')
-            Password=$(cat $FILE_SGS_JSON | jq -r '.DatabaseConnection.Server.PostgreSQL.SGS.Password')
-        else
-            echo "Firebird"
-            # Запускаем подменю программы
-            exit 0
-        fi
-    else
-        echo "Некорректный sgs.json"
-    fi
-fi
-
-
-
-# Путь к обрабатываемому файлу
-TARGET="$ACTIVE_DIR/rdt/$NAME_FILE"
-
 # запись в log
-DATE_STR=$(date +"%d.%m.%Y")
 TIME_STR=$(date +"%H:%M:%S")
 echo "[ARCHIVE3]" >> $LOG
 echo "[ARCHIVE3]"
@@ -77,7 +25,6 @@ echo "[$DATE_STR][$TIME_STR][$MOD][$MODULE_NAME][Количество запис
 for ((i=1; i<=$arcnums; i++)); do
     ind="NR==$i"
     line=$(echo "$ARCHIVE3" | awk $ind)
-
     IFS=';' read -r -a arr <<< "$line"
 
 export PGPASSWORD=$Password
@@ -91,11 +38,16 @@ arcdata=$(psql -U $Login -h $Host -d $Name -p $Port -tA -c "SELECT arcdata FROM 
 where flow_id = $flow_id and arcnum = ${arr[0]};")
 unset PGPASSWORD
 
-if [[ "$VER_PROTOCOL" == 0 ]] && [[ -n "$VERS_S" ]]; then
+
+if [[ "$VER_PROTOCOL" -eq 0 && -n "$VERS_S" ]]; then
     VSTOT=$(echo "$arcdata" | jq -r '.VSTOT')
     T=$(echo "$arcdata" | jq -r '.T')
     T=$(echo "scale=2; $T / 1" | bc)
+    [[ $T == .* ]] && T="0$T"
+    [[ $T == -.* ]] && T=$(echo "$T" | sed 's/^-./-0./')
     T_OUT=$(echo "$arcdata" | jq -r '.T_OUT')
+    T_OUT=$(echo "scale=2; $T_OUT / 1" | bc)
+    [[ $T_OUT == .* ]] && T="0$T_OUT"
     K=$(echo "$arcdata" | jq -r '.K')
     TMRSTATE=$(echo "$arcdata" | jq -r '.TMRSTATE')
     WARNINGSTATE=$(echo "$arcdata" | jq -r '.WARNINGSTATE')
@@ -124,77 +76,93 @@ if [[ "$VER_PROTOCOL" == 0 ]] && [[ -n "$VERS_S" ]]; then
     F_VSUND=$F_VSTOT
 
 else
-        VSTOT=$(echo "$arcdata" | jq -r '.VSTOT')
-        T=$(echo "$arcdata" | jq -r '.T')
-        T=$(echo "scale=2; $T / 1" | bc)
+    VSTOT=$(echo "$arcdata" | jq -r '.VSTOT')
+    T=$(echo "$arcdata" | jq -r '.T')
+    T=$(echo "scale=2; $T / 1" | bc)
+    [[ $T == .* ]] && T="0$T"
+    [[ $T == -.* ]] && T=$(echo "$T" | sed 's/^-./-0./')
+    if [[ -n $VERS_K ]]; then
         T_OUT=$(echo "$arcdata" | jq -r '.T_OUT')
-        K=$(echo "$arcdata" | jq -r '.K')
-        TMRSTATE=$(echo "$arcdata" | jq -r '.TMRSTATE')
-        WARNINGSTATE=$(echo "$arcdata" | jq -r '.WARNINGSTATE')
-        CRASHSTATE=$(echo "$arcdata" | jq -r '.CRASHSTATE')
-        EVENTCODE=$(echo "$arcdata" | jq -r '.EVENTCODE')
-        VSUND=$(echo "$arcdata" | jq -r '.VSUND')
-        SENSORSTATE=$(echo "$arcdata" | jq -r '.SENSORSTATE')
-        VALVESTATE=$(echo "$arcdata" | jq -r '.VALVESTATE')
-        BATTERY_PERCENT=$(echo "$arcdata" | jq -r '.BATTERY_PERCENT')
-        BATTERY_PERCENT_INPUT=$(echo "$arcdata" | jq -r '.BATTERY_PERCENT_INPUT')
-        ALARMSTATE=$(echo "$arcdata" | jq -r '.ALARMSTATE')
-        RPUSTATE=$(echo "$arcdata" | jq -r '.RPUSTATE')
-        SENSORSTATE_PR=$(echo "$arcdata" | jq -r '.SENSORSTATE_PR')
-        VALVESTATE_PR=$(echo "$arcdata" | jq -r '.VALVESTATE_PR')
-        VSUND=$(echo "$arcdata" | jq -r '.VSUND')
+        T_OUT=$(echo "scale=2; $T_OUT / 1" | bc)
+        [[ $T_OUT == .* ]] && T_OUT="0$T_OUT"
+        [[ $T_OUT == -.* ]] && T_OUT=$(echo "$T_OUT" | sed 's/^-./-0./')
+    else
+        T_OUT=""
+    fi
+    K=$(echo "$arcdata" | jq -r '.K')
+    TMRSTATE=$(echo "$arcdata" | jq -r '.TMRSTATE')
+    WARNINGSTATE=$(echo "$arcdata" | jq -r '.WARNINGSTATE')
+    CRASHSTATE=$(echo "$arcdata" | jq -r '.CRASHSTATE')
+    EVENTCODE=$(echo "$arcdata" | jq -r '.EVENTCODE')
+    VSUND=$(echo "$arcdata" | jq -r '.VSUND')
+    SENSORSTATE=$(echo "$arcdata" | jq -r '.SENSORSTATE')
+    VALVESTATE=$(echo "$arcdata" | jq -r '.VALVESTATE')
+    BATTERY_PERCENT=$(echo "$arcdata" | jq -r '.BATTERY_PERCENT')
+    BATTERY_PERCENT_INPUT=$(echo "$arcdata" | jq -r '.BATTERY_PERCENT_INPUT')
+    ALARMSTATE=$(echo "$arcdata" | jq -r '.ALARMSTATE')
+    RPUSTATE=$(echo "$arcdata" | jq -r '.RPUSTATE')
+    SENSORSTATE_PR=$(echo "$arcdata" | jq -r '.SENSORSTATE_PR')
+    VALVESTATE_PR=$(echo "$arcdata" | jq -r '.VALVESTATE_PR')
+    VSUND=$(echo "$arcdata" | jq -r '.VSUND')
 
-        F_devdate=$(echo "${arr[1]}" | sed 's/,/ /g')
-        F_VSTOT=$(echo "scale=4; ${arr[2]} * $VOLUME_PULSE" | bc)
-            if [[ "$F_VSTOT" == *0 ]]; then
-                F_VSTOT=$(echo "$F_VSTOT" | sed 's/0*$//')
-            fi
-            if [[ "$F_VSTOT" == .* ]]; then
-                F_VSTOT="0$F_VSTOT"
-            fi
-            if [ -z "$F_VSTOT" ]; then
-                F_VSTOT=0
-            fi
-
-        F_T=${arr[3]}
-        F_T_OUT=${arr[4]}
-        F_K=${arr[5]}
-        F_TMRSTATE=$(printf "%d" 0x"${arr[6]}" 2>/dev/null)
-        F_WARNINGSTATE=$(printf "%d" 0x"${arr[7]}" 2>/dev/null)
-        F_CRASHSTATE=$(printf "%d" 0x"${arr[9]}" 2>/dev/null)
-        F_EVENTCODE=$((16#${arr[10]}))
-        F_VSUND=$(echo "${arr[12]}" | grep -oE '[0-9]+')
+    F_devdate=$(echo "${arr[1]}" | sed 's/,/ /g')
+    if [ -n "${arr[2]}" ]; then
+        F_VSUND=$(echo "${arr[2]}" | grep -oE '[0-9]+')
         F_VSUND=$(echo "scale=4; $F_VSUND * $VOLUME_PULSE" | bc 2>/dev/null)
-            if [[ "$F_VSUND" == *0 ]]; then
-                F_VSUND=$(echo "$F_VSUND" | sed 's/0*$//' 2>/dev/null)
-            fi
-            if [[ "$F_VSUND" == .* ]]; then
-                F_VSUND="0$F_VSUND"
-            fi
-            if [ -z "$F_VSUND" ]; then
-                F_VSUND=$F_VSTOT
-            fi
+        [[ "$F_VSUND" == *0 ]] && F_VSUND=$(echo "$F_VSUND" | sed 's/0*$//')
+        [[ $F_VSUND == .* ]] && F_VSUND="0$F_VSUND"
+    else
+        F_VSUND=0
+    fi
 
-        F_SENSORSTATE=${arr[13]}
-        if [ -z "$F_SENSORSTATE" ]; then
-            F_SENSORSTATE=""
-        else
-            F_SENSORSTATE=$(printf "%d" 0x"${arr[13]}" 2>/dev/null)
-        fi
+    if [ -n "${arr[12]}" ]; then
+        F_VSTOT=$(echo "${arr[12]}" | grep -oE '[0-9]+' 2>/dev/null)
+        F_VSTOT=$(echo "scale=4; $F_VSTOT * $VOLUME_PULSE" | bc)
+        [[ "$F_VSTOT" == *0 ]] && F_VSTOT=$(echo "$F_VSTOT" | sed 's/0*$//')
+        [[ $F_VSTOT == .* ]] && F_VSTOT="0$F_VSTOT"
+    else
+        F_VSTOT=$F_VSUND
+    fi
+    F_T=${arr[3]}
+    F_T_OUT=${arr[4]}
+    F_K=${arr[5]}
+    F_TMRSTATE=$(printf "%d" 0x"${arr[6]}" 2>/dev/null)
+    F_WARNINGSTATE=$(printf "%d" 0x"${arr[7]}" 2>/dev/null)
+    F_ALARMSTATE=$(printf "%d" 0x"${arr[8]}" 2>/dev/null)
+    F_CRASHSTATE=$(printf "%d" 0x"${arr[9]}" 2>/dev/null)
+    F_EVENTCODE=$(printf "%d" 0x"${arr[10]}" 2>/dev/null)
+    if [[ "$F_EVENTCODE" != "$EVENTCODE" ]]; then
+        F_EVENTCODE=$((16#${arr[10]}))
+    fi
+
+
+    if [ -n "${arr[13]}" ]; then
+        F_SENSORSTATE=$(printf "%d" 0x"${arr[13]}" 2>/dev/null)
+    else
+        F_SENSORSTATE=""
+    fi
+    if [ -n "${arr[15]}" ]; then
         F_VALVESTATE=$(echo "${arr[15]}" | grep -oE '[0-9]+' 2>/dev/null)
-
+    else
+        F_VALVESTATE=""
+    fi
+    if [ -n "${arr[16]}" ]; then
         F_BATTERY_PERCENT=$(echo "scale=2; ${arr[16]} / 100" | bc 2>/dev/null)
-
         if [[ "$F_BATTERY_PERCENT" == *"0" ]]; then
             F_BATTERY_PERCENT="${F_BATTERY_PERCENT%0}"
         fi
-
+    else
+        F_BATTERY_PERCENT=""
+    fi
+    if [ -n "${arr[17]}" ]; then
         F_BATTERY_PERCENT_INPUT=$(echo "${arr[17]}" | grep -oE '[0-9]+' 2>/dev/null)
         F_BATTERY_PERCENT_INPUT=$(echo "scale=2; $F_BATTERY_PERCENT_INPUT / 100" | bc | sed 's/\.*0*$//' 2>/dev/null)
         if [[ "$F_BATTERY_PERCENT_INPUT" == *"0" ]] && [[ "$F_BATTERY_PERCENT_INPUT" != 100 ]]; then
             F_BATTERY_PERCENT_INPUT="${F_BATTERY_PERCENT_INPUT%0}"
         fi
-
+    else
+        F_BATTERY_PERCENT_INPUT=""
+    fi
 
 fi
 
@@ -236,8 +204,7 @@ fi
         fi
 
          sleep 0.03
-         if echo "$F_T" | grep -wq "$T"; then
-         #if [ "$F_T" == "$T" ]; then
+         if [[ "$F_T" == "$T" ]]; then
              echo "T"
              echo -e "${GREEN}F: $F_T${NC}"
              echo -e "${GREEN}B: $T${NC}"
@@ -252,6 +219,25 @@ fi
              TIME_STR=$(date +"%H:%M:%S")
              echo "[$DATE_STR][$TIME_STR][$MOD][$MODULE_NAME][Failed][Запись: ${arr[0]} T: FILE -> $F_T DB -> $T значения не совпали]" >> $LOG
          fi
+
+    if [ -n "$T_OUT" ]; then
+        sleep 0.03
+        if [[ "$F_T_OUT" == "$T_OUT" ]]; then
+            echo "T_OUT"
+            echo -e "${GREEN}F: $F_T_OUT${NC}"
+            echo -e "${GREEN}B: $T_OUT${NC}"
+            # запись в log
+            TIME_STR=$(date +"%H:%M:%S")
+            echo "[$DATE_STR][$TIME_STR][$MOD][$MODULE_NAME][Passed][Запись: ${arr[0]} T_OUT: FILE -> $F_T_OUT DB -> $T_OUT значения совпали]" >> $LOG
+        else
+            echo "T_OUT"
+            echo -e "${RED}F: $F_T_OUT${NC}"
+            echo -e "${RED}B: $T_OUT${NC}"
+            # запись в log
+            TIME_STR=$(date +"%H:%M:%S")
+            echo "[$DATE_STR][$TIME_STR][$MOD][$MODULE_NAME][Failed][Запись: ${arr[0]} T_OUT: FILE -> $F_T_OUT DB -> $T_OUT значения не совпали]" >> $LOG
+        fi
+    fi
 
          sleep 0.03
          if echo "$F_K" | grep -wq "$K"; then
@@ -303,6 +289,25 @@ fi
             # запись в log
             TIME_STR=$(date +"%H:%M:%S")
             echo "[$DATE_STR][$TIME_STR][$MOD][$MODULE_NAME][Failed][Запись: ${arr[0]} WARNINGSTATE: FILE -> $F_WARNINGSTATE DB -> $WARNINGSTATE значения не совпали]" >> $LOG
+        fi
+    fi
+
+    if [ -n "$F_ALARMSTATE" ]; then
+        sleep 0.03
+        if echo "$F_ALARMSTATE" | grep -wq "$ALARMSTATE"; then
+            echo "ALARMSTATE"
+            echo -e "${GREEN}F: $F_ALARMSTATE${NC}"
+            echo -e "${GREEN}B: $ALARMSTATE${NC}"
+            # запись в log
+            TIME_STR=$(date +"%H:%M:%S")
+            echo "[$DATE_STR][$TIME_STR][$MOD][$MODULE_NAME][Passed][Запись: ${arr[0]} ALARMSTATE: FILE -> $F_ALARMSTATE DB -> $ALARMSTATE значения совпали]" >> $LOG
+        else
+            echo "ALARMSTATE"
+            echo -e "${RED}F: $F_ALARMSTATE${NC}"
+            echo -e "${RED}B: $ALARMSTATE${NC}"
+            # запись в log
+            TIME_STR=$(date +"%H:%M:%S")
+            echo "[$DATE_STR][$TIME_STR][$MOD][$MODULE_NAME][Failed][Запись: ${arr[0]} ALARMSTATE: FILE -> $F_ALARMSTATE DB -> $ALARMSTATE значения не совпали]" >> $LOG
         fi
     fi
 

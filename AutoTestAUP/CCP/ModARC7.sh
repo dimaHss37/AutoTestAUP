@@ -1,62 +1,11 @@
 #!/bin/bash
 
-# Коды цветов
-RED="\033[31m" # Красный
-GREEN="\033[32m" # Зеленый
-NC="\033[0m" # Без цвета (сброс)
-
-# ищем "sgs.json"
-FILE_SGS_JSON=$(find /opt -type f -name "sgs.json" 2>/dev/null)
-if [ -z "$FILE_SGS_JSON" ]; then
-     echo "$Файл sgs.json не найден!"
-     exit 0
-fi
-
-DatabaseLocation=$(cat $FILE_SGS_JSON | jq -r '.AUPService.DbWriterService.DatabaseLocation')
-
-if [ "$DatabaseLocation" == "Local" ]; then
-    DatabaseType=$(cat $FILE_SGS_JSON | jq -r '.DatabaseConnection.Local.DatabaseType')
-    if [ "$DatabaseType" == "PostgreSQL" ]; then
-        Name=$(cat $FILE_SGS_JSON | jq -r '.DatabaseConnection.Local.PostgreSQL.SGS.Name')
-        Host=$(cat $FILE_SGS_JSON | jq -r '.DatabaseConnection.Local.PostgreSQL.SGS.Host')
-        Port=$(cat $FILE_SGS_JSON | jq -r '.DatabaseConnection.Local.PostgreSQL.SGS.Port')
-        Login=$(cat $FILE_SGS_JSON | jq -r '.DatabaseConnection.Local.PostgreSQL.SGS.Login')
-        Password=$(cat $FILE_SGS_JSON | jq -r '.DatabaseConnection.Local.PostgreSQL.SGS.Password')
-    else
-        echo "Firebird"
-        # Запускаем подменю программы
-        exit 0
-    fi
-else
-    if [ "$DatabaseLocation" == "Server" ]; then
-        DatabaseType=$(cat $FILE_SGS_JSON | jq -r '.DatabaseConnection.Server.DatabaseType')
-        if [ "$DatabaseType" == "PostgreSQL" ]; then
-            Name=$(cat $FILE_SGS_JSON | jq -r '.DatabaseConnection.Server.PostgreSQL.SGS.Name')
-            Host=$(cat $FILE_SGS_JSON | jq -r '.DatabaseConnection.Server.PostgreSQL.SGS.Host')
-            Port=$(cat $FILE_SGS_JSON | jq -r '.DatabaseConnection.Server.PostgreSQL.SGS.Port')
-            Login=$(cat $FILE_SGS_JSON | jq -r '.DatabaseConnection.Server.PostgreSQL.SGS.Login')
-            Password=$(cat $FILE_SGS_JSON | jq -r '.DatabaseConnection.Server.PostgreSQL.SGS.Password')
-        else
-            echo "Firebird"
-            # Запускаем подменю программы
-            exit 0
-        fi
-    else
-        echo "Некорректный sgs.json"
-    fi
-fi
-
-
-# Путь к обрабатываемому файлу
-TARGET="$ACTIVE_DIR/rdt/$NAME_FILE"
-
-DATE_STR=$(date +"%d.%m.%Y")
+TIME_STR=$(date +"%H:%M:%S")
 # запись в log
 echo "[ARCHIVE7]" >> $LOG
 echo "[ARCHIVE7]"
 MOD="ARCHIVE7"
 ARCHIVE7=$(cat $TARGET | awk '/\[ARCHIVE7\]/{f=2} f && /#/ {f=0; print; next} f' | sed '/ARCHIVE/d' | sed '/#/d')
-
 
 if [[ -z "$ARCHIVE7" ]]; then
     echo "В файле: $NAME_FILE нет суточеого архива"
@@ -99,26 +48,39 @@ if [[ "$VER_PROTOCOL" == 0 ]] && [[ -n "$VERS_S" ]]; then
     VSTOT=$(echo "$arcdata" | jq -r '.VSTOT')
     T=$(echo "$arcdata" | jq -r '.T')
     T=$(echo "scale=2; $T / 1" | bc)
+    [[ $T == .* ]] && T="0$T"
+    [[ $T == -.* ]] && T=$(echo "$T" | sed 's/^-./-0./')
     K=$(echo "$arcdata" | jq -r '.K')
     TMRSTATE=$(echo "$arcdata" | jq -r '.TMRSTATE')
     VSUND=$(echo "$arcdata" | jq -r '.VSUND')
 
     F_devdate=$(echo "${arr[1]}" | sed 's/,/ /g')
-    F_VSTOT=$(echo "scale=4; ${arr[2]} * $VOLUME_PULSE" | bc)
+    if [ -z "${arr[2]}" ]; then
+        F_VSUND=0
+    else
+        F_VSUND=$(echo "scale=4; ${arr[2]} * $VOLUME_PULSE" | bc)
+        if [[ "$F_VSUND" == *0 ]]; then
+            F_VSUND=$(echo "$F_VSUND" | sed 's/0*$//')
+        fi
+        if [[ "$F_VSUND" == .* ]]; then
+            F_VSUND="0$F_VSUND"
+        fi
+    fi
+
+    if [ -z "${arr[12]}" ]; then
+        F_VSTOT=$F_VSUND
+    else
+    F_VSTOT=$(echo "scale=4; ${arr[12]} * $VOLUME_PULSE" | bc)
         if [[ "$F_VSTOT" == *0 ]]; then
             F_VSTOT=$(echo "$F_VSTOT" | sed 's/0*$//')
         fi
         if [[ "$F_VSTOT" == .* ]]; then
             F_VSTOT="0$F_VSTOT"
         fi
-        if [ -z "$F_VSTOT" ]; then
-            F_VSTOT=0
-        fi
+    fi
     F_TMRSTATE=$(printf "%d" 0x"${arr[3]}" 2>/dev/null)
     F_T=${arr[4]}
     F_K=$(echo "${arr[5]}" | grep -oE '[0-9]+')
-    F_VSUND=$F_VSTOT
-
 else
         export PGPASSWORD=$Password
         devdate=$(psql -U $Login -h $Host -d $Name -p $Port -tA -c "SELECT devdate FROM archives.intarc
@@ -134,7 +96,10 @@ else
         VSTOT=$(echo "$arcdata" | jq -r '.VSTOT')
         T=$(echo "$arcdata" | jq -r '.T')
         T=$(echo "scale=2; $T / 1" | bc)
-        #T_OUT=$(echo "$arcdata" | jq -r '.T_OUT')
+        [[ $T == .* ]] && T="0$T"
+        [[ $T == -.* ]] && T=$(echo "$T" | sed 's/^-./-0./')
+        T_OUT=$(echo "$arcdata" | jq -r '.T_OUT')
+        [[ $T_OUT == .* ]] && T="0$T_OUT"
         K=$(echo "$arcdata" | jq -r '.K')
         TMRSTATE=$(echo "$arcdata" | jq -r '.TMRSTATE')
         WARNINGSTATE=$(echo "$arcdata" | jq -r '.WARNINGSTATE')
@@ -152,16 +117,31 @@ else
         LASTHOURARCNUM=$(echo "$arcdata" | jq -r '.LASTHOURARCNUM')
 
         F_devdate=$(echo "${arr[1]}" | sed 's/,/ /g')
-        F_VSTOT=$(echo "scale=4; ${arr[2]} * $VOLUME_PULSE" | bc)
+        F_devdate=$(echo "${arr[1]}" | sed 's/,/ /g')
+        if [ -z "${arr[2]}" ]; then
+            F_VSUND=0
+        else
+            F_VSUND=$(echo "scale=4; ${arr[2]} * $VOLUME_PULSE" | bc)
+            if [[ "$F_VSUND" == *0 ]]; then
+                F_VSUND=$(echo "$F_VSUND" | sed 's/0*$//')
+            fi
+            if [[ "$F_VSUND" == .* ]]; then
+                F_VSUND="0$F_VSUND"
+            fi
+        fi
+
+        if [ -z "${arr[12]}" ]; then
+            F_VSTOT=$F_VSUND
+        else
+        F_VSTOT=$(echo "scale=4; ${arr[12]} * $VOLUME_PULSE" | bc)
             if [[ "$F_VSTOT" == *0 ]]; then
                 F_VSTOT=$(echo "$F_VSTOT" | sed 's/0*$//')
             fi
             if [[ "$F_VSTOT" == .* ]]; then
                 F_VSTOT="0$F_VSTOT"
             fi
-            if [ -z "$F_VSTOT" ]; then
-                F_VSTOT=0
-            fi
+        fi
+
         F_T=${arr[3]}
         F_T_OUT=${arr[4]}
         if [[ "$F_T_OUT" == *"0" ]]; then
@@ -192,22 +172,6 @@ else
         else
             F_LASTHOURARCNUM="null"
         fi
-
-        if [ -n "${arr[12]}" ]; then
-            F_VSUND=$(echo "scale=4; ${arr[12]} * $VOLUME_PULSE" | bc)
-                if [[ "$F_VSUND" == *0 ]]; then
-                    F_VSUND=$(echo "$F_VSUND" | sed 's/0*$//')
-                fi
-                if [[ "$F_VSUND" == .* ]]; then
-                    F_VSUND="0$F_VSUND"
-                fi
-                if [ -z "$F_VSUND" ]; then
-                    F_VSUND=0
-                fi
-        else
-            F_VSUND=$F_VSTOT
-        fi
-
         if [ -n "${arr[13]}" ]; then
             F_SENSORSTATE=$(printf "%d" 0x"${arr[13]}" 2>/dev/null)
         else
@@ -220,40 +184,23 @@ else
             F_VALVESTATE="null"
         fi
 
-        F_BATTERY_PERCENT=$(echo "scale=2; ${arr[16]} / 100" | bc 2>/dev/null)
-        if [[ "$F_BATTERY_PERCENT" == *"0" ]]; then
-            F_BATTERY_PERCENT="${F_BATTERY_PERCENT%0}"
+        if [ -n "${arr[16]}" ]; then
+            F_BATTERY_PERCENT=$(echo "scale=2; ${arr[16]} / 100" | bc 2>/dev/null)
+            if [[ "$F_BATTERY_PERCENT" == *"0" ]]; then
+                F_BATTERY_PERCENT="${F_BATTERY_PERCENT%0}"
+            fi
+        else
+            F_BATTERY_PERCENT=""
         fi
-
-        F_BATTERY_PERCENT_INPUT=$(echo "${arr[17]}" | grep -oE '[0-9]+' 2>/dev/null)
-        F_BATTERY_PERCENT_INPUT=$(echo "scale=2; $F_BATTERY_PERCENT_INPUT / 100" | bc | sed 's/\.*0*$//' 2>/dev/null)
-        if [[ "$F_BATTERY_PERCENT_INPUT" == *"0" ]] && [[ "$F_BATTERY_PERCENT_INPUT" != 100 ]]; then
-            F_BATTERY_PERCENT_INPUT="${F_BATTERY_PERCENT_INPUT%0}"
+        if [ -n "${arr[17]}" ]; then
+            F_BATTERY_PERCENT_INPUT=$(echo "${arr[17]}" | grep -oE '[0-9]+' 2>/dev/null)
+            F_BATTERY_PERCENT_INPUT=$(echo "scale=2; $F_BATTERY_PERCENT_INPUT / 100" | bc | sed 's/\.*0*$//' 2>/dev/null)
+            if [[ "$F_BATTERY_PERCENT_INPUT" == *"0" ]] && [[ "$F_BATTERY_PERCENT_INPUT" != 100 ]]; then
+                F_BATTERY_PERCENT_INPUT="${F_BATTERY_PERCENT_INPUT%0}"
+            fi
+        else
+            F_BATTERY_PERCENT_INPUT=""
         fi
-
-    #    [0] 	arcnum
-    #    [1] 	devdate
-    #    [2]	VSTOT
-    #    [4] 	T
-    #    [4] 	T_OUT
-    #    [5] 	K
-    #    [6]	TMRSTATE
-    #    [7]	WARNINGSTATE
-    #    [8]    ALARMSTATE
-    #    [9] 	CRASHSTATE
-    #    [10]	EVENTCODE/LASTHOURARCNUM
-    #    [11]
-    #    [12]	VSUND
-    #    [13]	SENSORSTATE
-    #    [14]
-    #    [15]	VALVESTATE
-    #    [16]	BATTERY_PERCENT
-    #    [17]	BATTERY_PERCENT_INPUT
-    #
-    #          	RPUSTATE
-    #          	SENSORSTATE_PR
-    #          	VALVESTATE_PR
-    #          	VSUND
 
 
 
