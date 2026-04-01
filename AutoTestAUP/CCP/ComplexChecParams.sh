@@ -8,7 +8,7 @@ NC="\033[0m" # Без цвета (сброс)
 export RED=$RED
 export GREEN=$GREEN
 export NC=$NC
-export start=$(date +%s)
+
 
 # ищем "sgs.json"
 FILE_SGS_JSON=$(find /opt -type f -name "sgs.json" 2>/dev/null)
@@ -221,6 +221,7 @@ else
 
 fi
 
+export start=$(date +%s)
 echo "[$DATE_STR][$TIME_STR][$MODULE_NAME][I][Файл $NAME_FILE обработан]" >> $LOG
 echo "Файл $NAME_FILE обработан"
 sleep 1
@@ -349,14 +350,12 @@ if [ "$STR1" != "$STR2" ]; then
     echo -e "${RED}FILE ->    $STR1${NC}"
     echo -e "${RED}DB   ->    $STR2${NC}"
     echo "---------------------------"
-    # запись в log
     TIME_STR=$(date +"%H:%M:%S")
     echo "[$DATE_STR][$TIME_STR][$MOD][$MODULE_NAME][Failed][TYPE: FILE -> $TYPE DB -> $DB_TYPE значения не совпали]" >> $LOG
 else
     echo -e "${GREEN}FILE ->    $STR1${NC}"
     echo -e "${GREEN}DB   ->    $STR2${NC}"
     echo "---------------------------"
-    # запись в log
     TIME_STR=$(date +"%H:%M:%S")
     echo "[$DATE_STR][$TIME_STR][$MOD][$MODULE_NAME][Passed][TYPE: FILE -> $TYPE DB -> $DB_TYPE значения совпали]" >> $LOG
 fi
@@ -375,14 +374,12 @@ if echo "$SN" | grep -wq "$DB_SN"; then
     echo -e "${GREEN}FILE ->    $STR1${NC}"
     echo -e "${GREEN}DB   ->    $STR2${NC}"
     echo "---------------------------"
-    # запись в log
     TIME_STR=$(date +"%H:%M:%S")
     echo "[$DATE_STR][$TIME_STR][$MOD][$MODULE_NAME][Passed][SN: FILE -> $SN DB -> $DB_SN значения совпали]" >> $LOG
 else
     echo -e "${RED}FILE ->    $STR1${NC}"
     echo -e "${RED}DB   ->    $STR2${NC}"
     echo "---------------------------"
-    # запись в log
     TIME_STR=$(date +"%H:%M:%S")
     echo "[$DATE_STR][$TIME_STR][$MOD][$MODULE_NAME][Failed][SN: FILE -> $SN DB -> $DB_SN значения не совпали]" >> $LOG
 fi
@@ -401,7 +398,6 @@ else
     export VERS_K=$VERS_K
 fi
 
-# Получения значения из БД
 export PGPASSWORD=$Password
 DB_VERS=$(psql -U $Login -h $Host -p $Port -d $Name -tA -c "select value from info_params.device_info_params
 where device_id=$device_id and attribute_id=29;")
@@ -425,7 +421,6 @@ else
 fi
 #SIMIP
 SIMIP=$(cat $TARGET | grep simip -i | awk -F'=' '{print $2}')
-# Получения значения из БД
 export PGPASSWORD=$Password
 DB_SIMIP=$(psql -U $Login -h $Host -p $Port -d $Name -tA -c "select value from info_params.device_info_params
 where device_id=$device_id and attribute_id=48;")
@@ -469,7 +464,6 @@ ACTUAL_COUNTERS=$(tac $TARGET | grep -m 1 "ACTUAL COUNTERS" -a1 | head -n 1)
 IFS=';' read -r -a arr <<< "$ACTUAL_COUNTERS" # Преобразует строку в массив 'arr'
 i=0
 # 1 STATUS_SYSTEM
-# Получения значения из БД
 export PGPASSWORD=$Password
 DB_STATUS_SYSTEM=$(psql -U $Login -d $Name -h $Host -p $Port -tA -c "select value from info_params.device_info_params
 where device_id=$device_id and attribute_id=71;")
@@ -488,7 +482,6 @@ if echo "$STR1" | grep -wq "$STR2"; then
     echo "[$DATE_STR][$TIME_STR][$MOD][$MODULE_NAME][Passed][Параметр №1 STATUS_SYSTEM: FILE -> $STATUS_SYSTEM DB -> $DB_STATUS_SYSTEM значения совпали]" >> $LOG
     ((i++))
     if [ "$i" -ge "$COUNTERS" ]; then
-        # Запускаем подменю программы
         exit 0
     fi
 else
@@ -500,13 +493,11 @@ else
     echo "[$DATE_STR][$TIME_STR][$MOD][$MODULE_NAME][Failed][Параметр №1 STATUS_SYSTEM: FILE -> $STATUS_SYSTEM DB -> $DB_STATUS_SYSTEM значения не совпали]" >> $LOG
     ((i++))
     if [ "$i" -ge "$COUNTERS" ]; then
-        # Запускаем подменю программы
         exit 0
     fi
 fi
 
 # 2 VOLUME_PULSE
-# Получения значения из БД
 export PGPASSWORD=$Password
 DB_VOLUME_PULSE=$(psql -U $Login -d $Name -h $Host -p $Port -tA -c "select value from info_params.device_info_params
 where device_id=$device_id and attribute_id=103;")
@@ -534,7 +525,6 @@ if echo "$STR1" | grep -wq "$STR2"; then
     echo "[$DATE_STR][$TIME_STR][$MOD][$MODULE_NAME][Passed][Параметр №2 VOLUME_PULSE: FILE -> $VOLUME_PULSE DB -> $DB_VOLUME_PULSE значения совпали]" >> $LOG
     ((i++))
     if [ "$i" -ge "$COUNTERS" ]; then
-        # Запускаем подменю программы
         exit 0
     fi
 else
@@ -545,13 +535,11 @@ else
     echo "[$DATE_STR][$TIME_STR][$MOD][$MODULE_NAME][Failed][Параметр №2 VOLUME_PULSE: FILE -> $VOLUME_PULSE DB -> $DB_VOLUME_PULSE значения не совпали]" >> $LOG
     ((i++))
     if [ "$i" -ge "$COUNTERS" ]; then
-        # Запускаем подменю программы
         exit 0
     fi
 fi
 
 # 3 CURRENT_COUNTER
-# Получения значения из БД
 export PGPASSWORD=$Password
 DB_CURRENT_COUNTER=$(psql -U $Login -d $Name -h $Host -p $Port -tA -c "select value from info_params.device_info_params
 where device_id=$device_id and attribute_id=37;")
@@ -573,7 +561,6 @@ if echo "$STR1" | grep -wq "$STR2"; then
     echo "[$DATE_STR][$TIME_STR][$MOD][$MODULE_NAME][Passed][Параметр №3 CURRENT_COUNTER: FILE -> $CURRENT_COUNTER DB -> $DB_CURRENT_COUNTER значения совпали]" >> $LOG
     ((i++))
     if [ "$i" -ge "$COUNTERS" ]; then
-        # Запускаем подменю программы
         exit 0
     fi
 else
@@ -584,13 +571,11 @@ else
     echo "[$DATE_STR][$TIME_STR][$MOD][$MODULE_NAME][Failed][Параметр №3 CURRENT_COUNTER: FILE -> $CURRENT_COUNTER DB -> $DB_CURRENT_COUNTER значения не совпали]" >> $LOG
     ((i++))
     if [ "$i" -ge "$COUNTERS" ]; then
-        # Запускаем подменю программы
         exit 0
     fi
 fi
 
 # 4 DATETIME
-# Получения значения из БД
 export PGPASSWORD=$Password
 DB_DATETIME=$(psql -U $Login -d $Name -h $Host -p $Port -tA -c "select value from info_params.device_info_params
 where device_id=$device_id and attribute_id=33;")
@@ -607,7 +592,6 @@ if echo "$STR1" | grep -wq "$STR2"; then
     echo "[$DATE_STR][$TIME_STR][$MOD][$MODULE_NAME][Passed][Параметр №4 DATETIME: FILE -> $DATETIME DB -> $DB_DATETIME значения совпали]" >> $LOG
     ((i++))
     if [ "$i" -ge "$COUNTERS" ]; then
-        # Запускаем подменю программы
         exit 0
     fi
 else
@@ -618,20 +602,17 @@ else
     echo "[$DATE_STR][$TIME_STR][$MOD][$MODULE_NAME][Failed][Параметр №4 DATETIME: FILE -> $DATETIME DB -> $DB_DATETIME значения не совпали]" >> $LOG
     ((i++))
     if [ "$i" -ge "$COUNTERS" ]; then
-        # Запускаем подменю программы
         exit 0
     fi
 fi
 
 # 5 APN_ADDRESS
 if [ -z "$SIM_ACTIV" ]; then
-# Получения значения из БД
     export PGPASSWORD=$Password
     DB_APN_ADDRESS=$(psql -U $Login -h $Host -p $Port -d $Name -tA -c "select value from info_params.device_info_params
     where device_id=$device_id and attribute_id=54;")
     unset PGPASSWORD
 else
-    # Получения значения из БД
     export PGPASSWORD=$Password
     DB_APN_ADDRESS=$(psql -U $Login -h $Host -p $Port -d $Name -tA -c "select value from info_params.sim_info_params as si
     join dicts.attributes_dict as ad on ad.id=si.attribute_id
@@ -651,7 +632,6 @@ if echo "$STR1" | grep -wq "$STR2"; then
     echo "[$DATE_STR][$TIME_STR][$MOD][$MODULE_NAME][Passed][Параметр №5 APN_ADDRESS: FILE -> $APN_ADDRESS DB -> $DB_APN_ADDRESS значения совпали]" >> $LOG
     ((i++))
     if [ "$i" -ge "$COUNTERS" ]; then
-        # Запускаем подменю программы
         exit 0
     fi
 else
@@ -662,7 +642,6 @@ else
     echo "[$DATE_STR][$TIME_STR][$MOD][$MODULE_NAME][Failed][Параметр №5 APN_ADDRESS: FILE -> $APN_ADDRESS DB -> $DB_APN_ADDRESS значения не совпали]" >> $LOG
     ((i++))
     if [ "$i" -ge "$COUNTERS" ]; then
-        # Запускаем подменю программы
         exit 0
     fi
 fi
@@ -674,7 +653,6 @@ if [ -z "$SIM_ACTIV" ]; then
     where device_id=$device_id and attribute_id=52;")
     unset PGPASSWORD
 else
-    # Получения значения из БД
     export PGPASSWORD=$Password
     DB_APN_LOGIN=$(psql -U $Login -h $Host -p $Port -d $Name -tA -c "select value from info_params.sim_info_params as si
     join dicts.attributes_dict as ad on ad.id=si.attribute_id
@@ -694,7 +672,6 @@ if echo "$STR1" | grep -wq "$STR2"; then
     echo "[$DATE_STR][$TIME_STR][$MOD][$MODULE_NAME][Passed][Параметр №6 APN_LOGIN: FILE -> $APN_LOGIN DB -> $DB_APN_LOGIN значения совпали]" >> $LOG
     ((i++))
     if [ "$i" -ge "$COUNTERS" ]; then
-        # Запускаем подменю программы
         exit 0
     fi
 else
@@ -705,7 +682,6 @@ else
     echo "[$DATE_STR][$TIME_STR][$MOD][$MODULE_NAME][Failed][Параметр №6 APN_LOGIN: FILE -> $APN_LOGIN DB -> $DB_APN_LOGIN значения не совпали]" >> $LOG
     ((i++))
     if [ "$i" -ge "$COUNTERS" ]; then
-        # Запускаем подменю программы
         exit 0
     fi
 fi
@@ -737,7 +713,6 @@ if echo "$STR1" | grep -wq "$STR2"; then
     echo "[$DATE_STR][$TIME_STR][$MOD][$MODULE_NAME][Passed][Параметр №7 APN_PASSWORD: FILE -> $APN_PASSWORD DB -> $DB_APN_PASSWORD значения совпали]" >> $LOG
     ((i++))
     if [ "$i" -ge "$COUNTERS" ]; then
-        # Запускаем подменю программы
         exit 0
     fi
 else
@@ -748,7 +723,6 @@ else
     echo "[$DATE_STR][$TIME_STR][$MOD][$MODULE_NAME][Failed][Параметр №7 APN_PASSWORD: FILE -> $APN_PASSWORD DB -> $DB_APN_PASSWORD значения не совпали]" >> $LOG
     ((i++))
     if [ "$i" -ge "$COUNTERS" ]; then
-        # Запускаем подменю программы
         exit 0
     fi
 fi
@@ -780,7 +754,6 @@ if echo "$STR1" | grep -wq "$STR2"; then
     echo "[$DATE_STR][$TIME_STR][$MOD][$MODULE_NAME][Passed][Параметр №8 TCP_ADDRESS: FILE -> $TCP_ADDRESS DB -> $DB_TCP_ADDRESS значения совпали]" >> $LOG
     ((i++))
     if [ "$i" -ge "$COUNTERS" ]; then
-        # Запускаем подменю программы
         exit 0
     fi
 else
@@ -791,13 +764,11 @@ else
     echo "[$DATE_STR][$TIME_STR][$MOD][$MODULE_NAME][Failed][Параметр №8 TCP_ADDRESS: FILE -> $TCP_ADDRESS DB -> $DB_TCP_ADDRESS значения не совпали]" >> $LOG
     ((i++))
     if [ "$i" -ge "$COUNTERS" ]; then
-        # Запускаем подменю программы
         exit 0
     fi
 fi
 
 # 9 SMS_PHONE    //SMS_PHONE
-# Получения значения из БД
 # export PGPASSWORD=$Password
 #DB_SMS_PHONE=$(psql -U $Login -h $Host -p $Port -d $Name -tA -c "select value from info_params.sim_info_params as si
 #join dicts.attributes_dict as ad on ad.id=si.attribute_id
@@ -816,7 +787,6 @@ if echo "$STR1" | grep -wq "$STR2"; then
     echo "[$DATE_STR][$TIME_STR][$MOD][$MODULE_NAME][Passed][Параметр №9 SMS_PHONE: FILE -> $SMS_PHONE DB -> $DB_SMS_PHONE значения совпали]" >> $LOG
     ((i++))
     if [ "$i" -ge "$COUNTERS" ]; then
-        # Запускаем подменю программы
         exit 0
     fi
 else
@@ -827,7 +797,6 @@ else
     echo "[$DATE_STR][$TIME_STR][$MOD][$MODULE_NAME][Failed][Параметр №9 SMS_PHONE: FILE -> $SMS_PHONE DB -> $DB_SMS_PHONE значения не совпали]" >> $LOG
     ((i++))
     if [ "$i" -ge "$COUNTERS" ]; then
-        # Запускаем подменю программы
         exit 0
     fi
 fi
@@ -839,7 +808,6 @@ if [ -z "$SIM_ACTIV" ]; then
     where device_id=$device_id and attribute_id=41;")
     unset PGPASSWORD
 else
-    # Получения значения из БД
     export PGPASSWORD=$Password
     DB_BALANCE_PHONE=$(psql -U $Login -h $Host -p $Port -d $Name -tA -c "select value from info_params.sim_info_params as si
     join dicts.attributes_dict as ad on ad.id=si.attribute_id
@@ -871,7 +839,6 @@ else
     echo "[$DATE_STR][$TIME_STR][$MOD][$MODULE_NAME][Failed][Параметр №10 BALANCE_PHONE: FILE -> $BALANCE_PHONE DB -> $DB_BALANCE_PHONE значения не совпали]" >> $LOG
     ((i++))
     if [ "$i" -ge "$COUNTERS" ]; then
-        # Запускаем подменю программы
         exit 0
     fi
 fi
@@ -883,7 +850,6 @@ if [ -z "$SIM_ACTIV" ]; then
     where device_id=$device_id and attribute_id=42;")
     unset PGPASSWORD
 else
-    # Получения значения из БД
     export PGPASSWORD=$Password
     DB_MODE_TRANSFER=$(psql -U $Login -h $Host -p $Port -d $Name -tA -c "select value from info_params.sim_info_params as si
     join dicts.attributes_dict as ad on ad.id=si.attribute_id
@@ -903,7 +869,6 @@ if echo "$STR1" | grep -wq "$STR2"; then
     echo "[$DATE_STR][$TIME_STR][$MOD][$MODULE_NAME][Passed][Параметр №11 MODE_TRANSFER: FILE -> $MODE_TRANSFER DB -> $DB_MODE_TRANSFER значения совпали]" >> $LOG
     ((i++))
     if [ "$i" -ge "$COUNTERS" ]; then
-        # Запускаем подменю программы
         exit 0
     fi
 else
@@ -914,13 +879,11 @@ else
     echo "[$DATE_STR][$TIME_STR][$MOD][$MODULE_NAME][Failed][Параметр №11 MODE_TRANSFER: FILE -> $MODE_TRANSFER DB -> $DB_MODE_TRANSFER значения не совпали]" >> $LOG
     ((i++))
     if [ "$i" -ge "$COUNTERS" ]; then
-        # Запускаем подменю программы
         exit 0
     fi
 fi
 
 # 12 BATTERY   //BATTERY
-# Получения значения из БД
 export PGPASSWORD=$Password
 DB_BATTERY=$(psql -U $Login -h $Host -p $Port -d $Name -tA -c "select value from info_params.device_info_params
 join dicts.attributes_dict on dicts.attributes_dict.id = info_params.device_info_params.attribute_id
@@ -942,7 +905,6 @@ if echo "$STR1" | grep -wq "$STR2"; then
     echo "[$DATE_STR][$TIME_STR][$MOD][$MODULE_NAME][Passed][Параметр №12 BATTERY: FILE -> $BATTERY DB -> $DB_BATTERY значения совпали]" >> $LOG
     ((i++))
     if [ "$i" -ge "$COUNTERS" ]; then
-        # Запускаем подменю программы
         exit 0
     fi
 else
@@ -953,13 +915,11 @@ else
     echo "[$DATE_STR][$TIME_STR][$MOD][$MODULE_NAME][Failed][Параметр №12 BATTERY: FILE -> $BATTERY DB -> $DB_BATTERY значения не совпали]" >> $LOG
     ((i++))
     if [ "$i" -ge "$COUNTERS" ]; then
-        # Запускаем подменю программы
         exit 0
     fi
 fi
 
 # 13 SENSOR_TEMP   //TEMP_SENSOR
-# Получения значения из БД
 export PGPASSWORD=$Password
 DB_SENSOR_TEMP=$(psql -U $Login -h $Host -p $Port -d $Name -tA -c "select value from info_params.device_info_params
 join dicts.attributes_dict on dicts.attributes_dict.id = info_params.device_info_params.attribute_id
@@ -977,7 +937,6 @@ if echo "$STR1" | grep -wq "$STR2"; then
     echo "[$DATE_STR][$TIME_STR][$MOD][$MODULE_NAME][Passed][Параметр №13 SENSOR_TEMP: FILE -> $SENSOR_TEMP DB -> $DB_SENSOR_TEMP значения совпали]" >> $LOG
     ((i++))
     if [ "$i" -ge "$COUNTERS" ]; then
-        # Запускаем подменю программы
         exit 0
     fi
 else
@@ -988,7 +947,6 @@ else
     echo "[$DATE_STR][$TIME_STR][$MOD][$MODULE_NAME][Failed][Параметр №13 SENSOR_TEMP: FILE -> $SENSOR_TEMP DB -> $DB_SENSOR_TEMP значения не совпали]" >> $LOG
     ((i++))
     if [ "$i" -ge "$COUNTERS" ]; then
-        # Запускаем подменю программы
         exit 0
     fi
 fi
@@ -1000,7 +958,6 @@ if [ -z "$SIM_ACTIV" ]; then
     where device_id=$device_id and attribute_id=99;")
     unset PGPASSWORD
 else
-    # Получения значения из БД
     export PGPASSWORD=$Password
     DB_RESERVE_INTERVAL=$(psql -U $Login -h $Host -p $Port -d $Name -tA -c "select value from info_params.sim_info_params as si
     join dicts.attributes_dict as ad on ad.id=si.attribute_id
@@ -1020,7 +977,6 @@ if echo "$STR1" | grep -wq "$STR2"; then
     echo "[$DATE_STR][$TIME_STR][$MOD][$MODULE_NAME][Passed][Параметр №14 RESERVE_INTERVAL: FILE -> $RESERVE_INTERVAL DB -> $DB_RESERVE_INTERVAL значения совпали]" >> $LOG
     ((i++))
     if [ "$i" -ge "$COUNTERS" ]; then
-        # Запускаем подменю программы
         exit 0
     fi
 else
@@ -1031,13 +987,11 @@ else
     echo "[$DATE_STR][$TIME_STR][$MOD][$MODULE_NAME][Failed][Параметр №14 RESERVE_INTERVAL: FILE -> $RESERVE_INTERVAL DB -> $DB_RESERVE_INTERVAL значения не совпали]" >> $LOG
     ((i++))
     if [ "$i" -ge "$COUNTERS" ]; then
-        # Запускаем подменю программы
         exit 0
     fi
 fi
 
 # 15 SEANCECNT_MAX  //MAX_SESSION
-# Получения значения из БД
 export PGPASSWORD=$Password
 DB_SEANCECNT_MAX=$(psql -U $Login -h $Host -p $Port -d $Name -tA -c "select value from info_params.device_info_params
 where device_id=$device_id and attribute_id=46;")
@@ -1054,7 +1008,6 @@ if echo "$STR1" | grep -wq "$STR2"; then
     echo "[$DATE_STR][$TIME_STR][$MOD][$MODULE_NAME][Passed][Параметр №15 SEANCECNT_MAX: FILE -> $SEANCECNT_MAX DB -> $DB_SEANCECNT_MAX значения совпали]" >> $LOG
     ((i++))
     if [ "$i" -ge "$COUNTERS" ]; then
-        # Запускаем подменю программы
         exit 0
     fi
 else
@@ -1065,7 +1018,6 @@ else
     echo "[$DATE_STR][$TIME_STR][$MOD][$MODULE_NAME][Failed][Параметр №15 SEANCECNT_MAX: FILE -> $SEANCECNT_MAX DB -> $DB_SEANCECNT_MAX значения не совпали]" >> $LOG
     ((i++))
     if [ "$i" -ge "$COUNTERS" ]; then
-        # Запускаем подменю программы
         exit 0
     fi
 fi
@@ -1077,7 +1029,6 @@ if [ -z "$SIM_ACTIV" ]; then
     where device_id=$device_id and attribute_id=44;")
     unset PGPASSWORD
 else
-    # Получения значения из БД
     export PGPASSWORD=$Password
     DB_SEANCECNT=$(psql -U $Login -h $Host -p $Port -d $Name -tA -c "select value from info_params.sim_info_params as si
     join dicts.attributes_dict as ad on ad.id=si.attribute_id
@@ -1097,7 +1048,6 @@ if echo "$STR1" | grep -wq "$STR2"; then
     echo "[$DATE_STR][$TIME_STR][$MOD][$MODULE_NAME][Passed][Параметр №16 SEANCECNT: FILE -> $SEANCECNT DB -> $DB_SEANCECNT значения совпали]" >> $LOG
     ((i++))
     if [ "$i" -ge "$COUNTERS" ]; then
-        # Запускаем подменю программы
         exit 0
     fi
 else
@@ -1108,7 +1058,6 @@ else
     echo "[$DATE_STR][$TIME_STR][$MOD][$MODULE_NAME][Failed][Параметр №16 SEANCECNT: FILE -> $SEANCECNT DB -> $DB_SEANCECNT значения не совпали]" >> $LOG
     ((i++))
     if [ "$i" -ge "$COUNTERS" ]; then
-        # Запускаем подменю программы
         exit 0
     fi
 fi
@@ -1120,7 +1069,6 @@ if [ -z "$SIM_ACTIV" ]; then
     where device_id=$device_id and attribute_id=45;")
     unset PGPASSWORD
 else
-    # Получения значения из БД
     export PGPASSWORD=$Password
     DB_SEANCECNT_ERR=$(psql -U $Login -h $Host -p $Port -d $Name -tA -c "select value from info_params.sim_info_params as si
     join dicts.attributes_dict as ad on ad.id=si.attribute_id
@@ -1140,7 +1088,6 @@ if echo "$STR1" | grep -wq "$STR2"; then
     echo "[$DATE_STR][$TIME_STR][$MOD][$MODULE_NAME][Passed][Параметр №17 SEANCECNT_ERR: FILE -> $SEANCECNT_ERR DB -> $DB_SEANCECNT_ERR значения совпали]" >> $LOG
     ((i++))
     if [ "$i" -ge "$COUNTERS" ]; then
-        # Запускаем подменю программы
         exit 0
     fi
 else
@@ -1151,13 +1098,11 @@ else
     echo "[$DATE_STR][$TIME_STR][$MOD][$MODULE_NAME][Failed][Параметр №17 SEANCECNT_ERR: FILE -> $SEANCECNT_ERR DB -> $DB_SEANCECNT_ERR значения не совпали]" >> $LOG
     ((i++))
     if [ "$i" -ge "$COUNTERS" ]; then
-        # Запускаем подменю программы
         exit 0
     fi
 fi
 
 # 18 GAS_DAY    //GAS_DAY
-# Получения значения из БД
 export PGPASSWORD=$Password
 DB_GAS_DAY=$(psql -U $Login -h $Host -p $Port -d $Name -tA -c "SELECT gasbegin FROM devices_custs.device_static_params
 where device_id=$device_id;")
@@ -1174,7 +1119,6 @@ if echo "$STR1" | grep -wq "$STR2"; then
     echo "[$DATE_STR][$TIME_STR][$MOD][$MODULE_NAME][Passed][Параметр №18 GAS_DAY: FILE -> $GAS_DAY DB -> $DB_GAS_DAY значения совпали]" >> $LOG
     ((i++))
     if [ "$i" -ge "$COUNTERS" ]; then
-        # Запускаем подменю программы
         exit 0
     fi
 else
@@ -1185,13 +1129,11 @@ else
     echo "[$DATE_STR][$TIME_STR][$MOD][$MODULE_NAME][Failed][Параметр №18 GAS_DAY: FILE -> $GAS_DAY DB -> $DB_GAS_DAY значения не совпали]" >> $LOG
     ((i++))
     if [ "$i" -ge "$COUNTERS" ]; then
-        # Запускаем подменю программы
         exit 0
     fi
 fi
 
 # 19 HWVERSION  //HW_VER
-# Получения значения из БД
 export PGPASSWORD=$Password
 DB_HWVERSION=$(psql -U $Login -h $Host -p $Port -d $Name -tA -c "select value from info_params.device_info_params
 where device_id=$device_id and attribute_id=100;")
@@ -1208,7 +1150,6 @@ if echo "$STR1" | grep -wq "$STR2"; then
     echo "[$DATE_STR][$TIME_STR][$MOD][$MODULE_NAME][Passed][Параметр №19 HWVERSION: FILE -> $HWVERSION DB -> $DB_HWVERSION значения совпали]" >> $LOG
     ((i++))
     if [ "$i" -ge "$COUNTERS" ]; then
-        # Запускаем подменю программы
         exit 0
     fi
 else
@@ -1219,7 +1160,6 @@ else
     echo "[$DATE_STR][$TIME_STR][$MOD][$MODULE_NAME][Failed][Параметр №19 HWVERSION: FILE -> $HWVERSION DB -> $DB_HWVERSION значения не совпали]" >> $LOG
     ((i++))
     if [ "$i" -ge "$COUNTERS" ]; then
-        # Запускаем подменю программы
         exit 0
     fi
 fi
@@ -1231,7 +1171,6 @@ if [ -z "$SIM_ACTIV" ]; then
     where device_id=$device_id and attribute_id=101;")
     unset PGPASSWORD
 else
-    # Получения значения из БД
     export PGPASSWORD=$Password
     DB_AUTOSWITH=$(psql -U $Login -h $Host -p $Port -d $Name -tA -c "select value from info_params.sim_info_params as si
     join dicts.attributes_dict as ad on ad.id=si.attribute_id
@@ -1251,7 +1190,6 @@ if echo "$STR1" | grep -wq "$STR2"; then
     echo "[$DATE_STR][$TIME_STR][$MOD][$MODULE_NAME][Passed][Параметр №20 AUTOSWITH: FILE -> $AUTOSWITH DB -> $DB_AUTOSWITH значения совпали]" >> $LOG
     ((i++))
     if [ "$i" -ge "$COUNTERS" ]; then
-        # Запускаем подменю программы
         $ACTIVE_DIR/ModSimData.sh
         $ACTIVE_DIR/ModARC3.sh
         $ACTIVE_DIR/ModARC4.sh
@@ -1270,7 +1208,6 @@ else
     echo "[$DATE_STR][$TIME_STR][$MOD][$MODULE_NAME][Failed][Параметр №20 AUTOSWITH: FILE -> $AUTOSWITH DB -> $DB_AUTOSWITH значения не совпали]" >> $LOG
     ((i++))
     if [ "$i" -ge "$COUNTERS" ]; then
-        # Запускаем подменю программы
         $ACTIVE_DIR/ModSimData.sh
         $ACTIVE_DIR/ModARC3.sh
         $ACTIVE_DIR/ModARC4.sh
@@ -1284,7 +1221,6 @@ else
 fi
 
 # 21 LASTCHANGEARCNUM   //ARC_CHANGE_LASTREC
-# Получения значения из БД
 export PGPASSWORD=$Password
 DB_LASTCHANGEARCNUM=$(psql -U $Login -h $Host -p $Port -d $Name -tA -c "select value from info_params.device_info_params
 where device_id=$device_id and attribute_id=87;")
@@ -1301,7 +1237,6 @@ if echo "$STR1" | grep -wq "$STR2"; then
     echo "[$DATE_STR][$TIME_STR][$MOD][$MODULE_NAME][Passed][Параметр №21 LASTCHANGEARCNUM: FILE -> $LASTCHANGEARCNUM DB -> $DB_LASTCHANGEARCNUM значения совпали]" >> $LOG
     ((i++))
     if [ "$i" -ge "$COUNTERS" ]; then
-        # Запускаем подменю программы
         exit 0
     fi
 else
@@ -1312,7 +1247,6 @@ else
     echo "[$DATE_STR][$TIME_STR][$MOD][$MODULE_NAME][Failed][Параметр №21 LASTCHANGEARCNUM: FILE -> $LASTCHANGEARCNUM DB -> $DB_LASTCHANGEARCNUM значения не совпали]" >> $LOG
     ((i++))
     if [ "$i" -ge "$COUNTERS" ]; then
-        # Запускаем подменю программы
         exit 0
     fi
 fi
@@ -1320,7 +1254,6 @@ fi
 # 22 LASTSYSARCNUM  //ARC_SYSTEM_LASTREC || ARC_EVENT_LASTREC
 if [ -n "$VERS_S" ]; then
 if (( $(echo "$VERS_S < 1.273700" | bc -l) )); then
-    # Получения значения из БД
     export PGPASSWORD=$Password
     DB_LASTSYSARCNUM=$(psql -U $Login -h $Host -p $Port -d $Name -tA -c "select value from info_params.device_info_params
     where device_id=$device_id and attribute_id=2684;")
@@ -1337,7 +1270,6 @@ if (( $(echo "$VERS_S < 1.273700" | bc -l) )); then
             echo "[$DATE_STR][$TIME_STR][$MOD][$MODULE_NAME][Passed][Параметр №22 LASTSYSARCNUM: FILE -> $LASTSYSARCNUM DB -> $DB_LASTSYSARCNUM значения совпали]" >> $LOG
             ((i++))
             if [ "$i" -ge "$COUNTERS" ]; then
-                # Запускаем подменю программы
                 $ACTIVE_DIR/ModSimData.sh
                 $ACTIVE_DIR/ModARC3.sh
                 $ACTIVE_DIR/ModARC4.sh
@@ -1356,7 +1288,6 @@ if (( $(echo "$VERS_S < 1.273700" | bc -l) )); then
             echo "[$DATE_STR][$TIME_STR][$MOD][$MODULE_NAME][Failed][Параметр №22 LASTSYSARCNUM: FILE -> $LASTSYSARCNUM DB -> $DB_LASTSYSARCNUM значения не совпали]" >> $LOG
             ((i++))
             if [ "$i" -ge "$COUNTERS" ]; then
-                # Запускаем подменю программы
                 $ACTIVE_DIR/ModSimData.sh
                 $ACTIVE_DIR/ModARC3.sh
                 $ACTIVE_DIR/ModARC4.sh
@@ -1369,7 +1300,6 @@ if (( $(echo "$VERS_S < 1.273700" | bc -l) )); then
             fi
         fi
 else
-    # Получения значения из БД
     export PGPASSWORD=$Password
     DB_LASTSYSARCNUM=$(psql -U $Login -h $Host -p $Port -d $Name -tA -c "select value from info_params.device_info_params
     where device_id=$device_id and attribute_id=82;")
@@ -1386,7 +1316,6 @@ else
             echo "[$DATE_STR][$TIME_STR][$MOD][$MODULE_NAME][Passed][Параметр №22 LASTSYSARCNUM: FILE -> $LASTSYSARCNUM DB -> $DB_LASTSYSARCNUM значения совпали]" >> $LOG
             ((i++))
             if [ "$i" -ge "$COUNTERS" ]; then
-                # Запускаем подменю программы
                 $ACTIVE_DIR/ModSimData.sh
                 $ACTIVE_DIR/ModARC3.sh
                 $ACTIVE_DIR/ModARC4.sh
@@ -1405,7 +1334,6 @@ else
             echo "[$DATE_STR][$TIME_STR][$MOD][$MODULE_NAME][Failed][Параметр №22 LASTSYSARCNUM: FILE -> $LASTSYSARCNUM DB -> $DB_LASTSYSARCNUM значения не совпали]" >> $LOG
             ((i++))
             if [ "$i" -ge "$COUNTERS" ]; then
-                # Запускаем подменю программы
                 $ACTIVE_DIR/ModSimData.sh
                 $ACTIVE_DIR/ModARC3.sh
                 $ACTIVE_DIR/ModARC4.sh
@@ -1419,7 +1347,6 @@ else
         fi
 fi
 else
-    # Получения значения из БД
     export PGPASSWORD=$Password
     DB_LASTSYSARCNUM=$(psql -U $Login -h $Host -p $Port -d $Name -tA -c "select value from info_params.device_info_params
     where device_id=$device_id and attribute_id=82;")
@@ -1436,7 +1363,6 @@ else
             echo "[$DATE_STR][$TIME_STR][$MOD][$MODULE_NAME][Passed][Параметр №22 LASTSYSARCNUM: FILE -> $LASTSYSARCNUM DB -> $DB_LASTSYSARCNUM значения совпали]" >> $LOG
             ((i++))
             if [ "$i" -ge "$COUNTERS" ]; then
-                # Запускаем подменю программы
                 $ACTIVE_DIR/ModARC3.sh
                 $ACTIVE_DIR/ModARC4.sh
                 $ACTIVE_DIR/ModARC5.sh
@@ -1454,7 +1380,6 @@ else
             echo "[$DATE_STR][$TIME_STR][$MOD][$MODULE_NAME][Failed][Параметр №22 LASTSYSARCNUM: FILE -> $LASTSYSARCNUM DB -> $DB_LASTSYSARCNUM значения не совпали]" >> $LOG
             ((i++))
             if [ "$i" -ge "$COUNTERS" ]; then
-                # Запускаем подменю программы
                 $ACTIVE_DIR/ModARC3.sh
                 $ACTIVE_DIR/ModARC4.sh
                 $ACTIVE_DIR/ModARC5.sh
@@ -1467,7 +1392,6 @@ else
         fi
 fi
 # 23 LASTHOURARCNUM //ARC_HOUR_LASTREC
-# Получения значения из БД
 export PGPASSWORD=$Password
 DB_LASTHOURARCNUM=$(psql -U $Login -h $Host -p $Port -d $Name -tA -c "select value from info_params.device_info_params
 where device_id=$device_id and attribute_id=86;")
@@ -1484,7 +1408,6 @@ if echo "$STR1" | grep -wq "$STR2"; then
     echo "[$DATE_STR][$TIME_STR][$MOD][$MODULE_NAME][Passed][Параметр №23 LASTHOURARCNUM: FILE -> $LASTHOURARCNUM DB -> $DB_LASTHOURARCNUM значения совпали]" >> $LOG
     ((i++))
     if [ "$i" -ge "$COUNTERS" ]; then
-        # Запускаем подменю программы
         exit 0
     fi
 else
@@ -1495,13 +1418,11 @@ else
     echo "[$DATE_STR][$TIME_STR][$MOD][$MODULE_NAME][Failed][Параметр №23 LASTHOURARCNUM: FILE -> $LASTHOURARCNUM DB -> $DB_LASTHOURARCNUM значения не совпали]" >> $LOG
     ((i++))
     if [ "$i" -ge "$COUNTERS" ]; then
-        # Запускаем подменю программы
         exit 0
     fi
 fi
 
 # 24 LASTDAYARCNUM  //ARC_DAY_LASTREC
-# Получения значения из БД
 export PGPASSWORD=$Password
 DB_LASTDAYARCNUM=$(psql -U $Login -h $Host -p $Port -d $Name -tA -c "select value from info_params.device_info_params
 where device_id=$device_id and attribute_id=84;")
@@ -1518,7 +1439,6 @@ if echo "$STR1" | grep -wq "$STR2"; then
     echo "[$DATE_STR][$TIME_STR][$MOD][$MODULE_NAME][Passed][Параметр №24 LASTDAYARCNUM: FILE -> $LASTDAYARCNUM DB -> $DB_LASTDAYARCNUM значения совпали]" >> $LOG
     ((i++))
     if [ "$i" -ge "$COUNTERS" ]; then
-        # Запускаем подменю программы
         exit 0
     fi
 else
@@ -1529,13 +1449,11 @@ else
     echo "[$DATE_STR][$TIME_STR][$MOD][$MODULE_NAME][Failed][Параметр №24 LASTDAYARCNUM: FILE -> $LASTDAYARCNUM DB -> $DB_LASTDAYARCNUM значения не совпали]" >> $LOG
     ((i++))
     if [ "$i" -ge "$COUNTERS" ]; then
-        # Запускаем подменю программы
         exit 0
     fi
 fi
 
 # 25 P_ABS  //PABS
-# Получения значения из БД
 export PGPASSWORD=$Password
 DB_P_ABS=$(psql -U $Login -h $Host -p $Port -d $Name -tA -c "select value from info_params.device_info_params
 where device_id=$device_id and attribute_id=2667;")
@@ -1567,7 +1485,6 @@ else
 fi
 
 # 26 LASTVALVECMD   //VALVE_SRV_CMD
-# Получения значения из БД
 export PGPASSWORD=$Password
 DB_LASTVALVECMD=$(psql -U $Login -h $Host -p $Port -d $Name -tA -c "select value from info_params.device_info_params
 where device_id=$device_id and attribute_id=2685;")
@@ -1584,7 +1501,6 @@ if echo "$STR1" | grep -wq "$STR2"; then
     echo "[$DATE_STR][$TIME_STR][$MOD][$MODULE_NAME][Passed][Параметр №26 LASTVALVECMD: FILE -> $LASTVALVECMD DB -> $DB_LASTVALVECMD значения совпали]" >> $LOG
     ((i++))
     if [ "$i" -ge "$COUNTERS" ]; then
-        # Запускаем подменю программы
         exit 0
     fi
 else
@@ -1595,13 +1511,11 @@ else
     echo "[$DATE_STR][$TIME_STR][$MOD][$MODULE_NAME][Failed][Параметр №26 LASTVALVECMD: FILE -> $LASTVALVECMD DB -> $DB_LASTVALVECMD значения не совпали]" >> $LOG
     ((i++))
     if [ "$i" -ge "$COUNTERS" ]; then
-        # Запускаем подменю программы
         exit 0
     fi
 fi
 
 # 27 VALVESTATE //VALVE_STATE
-# Получения значения из БД
 export PGPASSWORD=$Password
 DB_VALVESTATE=$(psql -U $Login -h $Host -p $Port -d $Name -tA -c "select value from info_params.device_info_params
 where device_id=$device_id and attribute_id=72;")
@@ -1627,7 +1541,6 @@ if echo "$STR1" | grep -wq "$STR2"; then
     echo "[$DATE_STR][$TIME_STR][$MOD][$MODULE_NAME][Passed][Параметр №27 VALVESTATE: FILE -> $VALVESTATE DB -> $DB_VALVESTATE значения совпали]" >> $LOG
     ((i++))
     if [ "$i" -ge "$COUNTERS" ]; then
-        # Запускаем подменю программы
         exit 0
     fi
 else
@@ -1638,7 +1551,6 @@ else
     echo "[$DATE_STR][$TIME_STR][$MOD][$MODULE_NAME][Failed][Параметр №27 VALVESTATE: FILE -> $VALVESTATE DB -> $DB_VALVESTATE значения не совпали]" >> $LOG
     ((i++))
     if [ "$i" -ge "$COUNTERS" ]; then
-        # Запускаем подменю программы
         exit 0
     fi
 fi
@@ -1670,7 +1582,6 @@ if echo "$STR1" | grep -wq "$STR2"; then
     echo "[$DATE_STR][$TIME_STR][$MOD][$MODULE_NAME][Passed][Параметр №28 CNT_FAIL_SIM: FILE -> $CNT_FAIL_SIM DB -> $DB_CNT_FAIL_SIM значения совпали]" >> $LOG
     ((i++))
     if [ "$i" -ge "$COUNTERS" ]; then
-        # Запускаем подменю программы
         exit 0
     fi
 else
@@ -1681,13 +1592,11 @@ else
     echo "[$DATE_STR][$TIME_STR][$MOD][$MODULE_NAME][Failed][Параметр №28 CNT_FAIL_SIM: FILE -> $CNT_FAIL_SIM DB -> $DB_CNT_FAIL_SIM значения не совпали]" >> $LOG
     ((i++))
     if [ "$i" -ge "$COUNTERS" ]; then
-        # Запускаем подменю программы
         exit 0
     fi
 fi
 
 # 29 CNT_FAIL_SPEED //COUNT_FAIL_SPEED
-# Получения значения из БД
 export PGPASSWORD=$Password
 DB_CNT_FAIL_SPEED=$(psql -U $Login -h $Host -p $Port -d $Name -tA -c "select value from info_params.device_info_params
 where device_id=$device_id and attribute_id=2670;")
@@ -1704,7 +1613,6 @@ if echo "$STR1" | grep -wq "$STR2"; then
     echo "[$DATE_STR][$TIME_STR][$MOD][$MODULE_NAME][Passed][Параметр №29 CNT_FAIL_SPEED: FILE -> $CNT_FAIL_SPEED DB -> $DB_CNT_FAIL_SPEED значения совпали]" >> $LOG
     ((i++))
     if [ "$i" -ge "$COUNTERS" ]; then
-        # Запускаем подменю программы
         $ACTIVE_DIR/ModSimData.sh
         $ACTIVE_DIR/ModARC3.sh
         $ACTIVE_DIR/ModARC4.sh
@@ -1723,7 +1631,6 @@ else
     echo "[$DATE_STR][$TIME_STR][$MOD][$MODULE_NAME][Failed][Параметр №29 CNT_FAIL_SPEED: FILE -> $CNT_FAIL_SPEED DB -> $DB_CNT_FAIL_SPEED значения не совпали]" >> $LOG
     ((i++))
     if [ "$i" -ge "$COUNTERS" ]; then
-        # Запускаем подменю программы
         $ACTIVE_DIR/ModSimData.sh
         $ACTIVE_DIR/ModARC3.sh
         $ACTIVE_DIR/ModARC4.sh
@@ -1737,7 +1644,6 @@ else
 fi
 
 # 30 VALVE_AUTO_CTL //VALVE_AUTO_CONTROL
-# Получения значения из БД
 export PGPASSWORD=$Password
 DB_VALVE_AUTO_CTL=$(psql -U $Login -h $Host -p $Port -d $Name -tA -c "select value from info_params.device_info_params
 where device_id=$device_id and attribute_id=2671;")
@@ -1754,7 +1660,6 @@ if echo "$STR1" | grep -wq "$STR2"; then
     echo "[$DATE_STR][$TIME_STR][$MOD][$MODULE_NAME][Passed][Параметр №30 VALVE_AUTO_CTL: FILE -> $VALVE_AUTO_CTL DB -> $DB_VALVE_AUTO_CTL значения совпали]" >> $LOG
     ((i++))
     if [ "$i" -ge "$COUNTERS" ]; then
-        # Запускаем подменю программы
         $ACTIVE_DIR/ModSimData.sh
         $ACTIVE_DIR/ModARC3.sh
         $ACTIVE_DIR/ModARC4.sh
@@ -1773,7 +1678,6 @@ else
     echo "[$DATE_STR][$TIME_STR][$MOD][$MODULE_NAME][Failed][Параметр №30 VALVE_AUTO_CTL: FILE -> $VALVE_AUTO_CTL DB -> $DB_VALVE_AUTO_CTL значения не совпали]" >> $LOG
     ((i++))
     if [ "$i" -ge "$COUNTERS" ]; then
-        # Запускаем подменю программы
         $ACTIVE_DIR/ModSimData.sh
         $ACTIVE_DIR/ModARC3.sh
         $ACTIVE_DIR/ModARC4.sh
@@ -1787,7 +1691,6 @@ else
 fi
 
 # 31 KFAKTOR    //K_FACTOR
-# Получения значения из БД
 export PGPASSWORD=$Password
 flow_id=$(psql -U $Login -h $Host -p $Port -d $Name -tA -c "select id from devices_custs.flow
 where device_id = $device_id;")
@@ -1811,7 +1714,6 @@ if echo "$STR1" | grep -wq "$STR2"; then
     echo "[$DATE_STR][$TIME_STR][$MOD][$MODULE_NAME][Passed][Параметр №31 KFAKTOR: FILE -> $KFAKTOR DB -> $DB_KFAKTOR значения совпали]" >> $LOG
     ((i++))
     if [ "$i" -ge "$COUNTERS" ]; then
-        # Запускаем подменю программы
         $ACTIVE_DIR/ModSimData.sh
         $ACTIVE_DIR/ModARC3.sh
         $ACTIVE_DIR/ModARC4.sh
@@ -1830,7 +1732,6 @@ else
     echo "[$DATE_STR][$TIME_STR][$MOD][$MODULE_NAME][Failed][Параметр №31 KFAKTOR: FILE -> $KFAKTOR DB -> $DB_KFAKTOR значения не совпали]" >> $LOG
     ((i++))
     if [ "$i" -ge "$COUNTERS" ]; then
-        # Запускаем подменю программы
         $ACTIVE_DIR/ModSimData.sh
         $ACTIVE_DIR/ModARC3.sh
         $ACTIVE_DIR/ModARC4.sh
@@ -1844,7 +1745,6 @@ else
 fi
 
 # 32 LASTTELARCNUM  //ARC_TELEMETRY_LASTREC
-# Получения значения из БД
 export PGPASSWORD=$Password
 DB_LASTTELARCNUM=$(psql -U $Login -h $Host -p $Port -d $Name -tA -c "select value from info_params.device_info_params
 where device_id=$device_id and attribute_id=85;")
@@ -1861,7 +1761,6 @@ if echo "$STR1" | grep -wq "$STR2"; then
     echo "[$DATE_STR][$TIME_STR][$MOD][$MODULE_NAME][Passed][Параметр №32 LASTTELARCNUM: FILE -> $LASTTELARCNUM DB -> $DB_LASTTELARCNUM значения совпали]" >> $LOG
     ((i++))
     if [ "$i" -ge "$COUNTERS" ]; then
-        # Запускаем подменю программы
         exit 0
     fi
 else
@@ -1872,13 +1771,11 @@ else
     echo "[$DATE_STR][$TIME_STR][$MOD][$MODULE_NAME][Failed][Параметр №32 LASTTELARCNUM: FILE -> $LASTTELARCNUM DB -> $DB_LASTTELARCNUM значения не совпали]" >> $LOG
     ((i++))
     if [ "$i" -ge "$COUNTERS" ]; then
-        # Запускаем подменю программы
         exit 0
     fi
 fi
 
 # 33 BATTERY_PERCENT    //BAT_TELEMETRY
-# Получения значения из БД
 export PGPASSWORD=$Password
 DB_BATTERY_PERCENT=$(psql -U $Login -h $Host -p $Port -d $Name -tA -c "select value from info_params.device_info_params
 where device_id=$device_id and attribute_id=35;")
@@ -1895,7 +1792,6 @@ if echo "$STR1" | grep -wq "$STR2"; then
     echo "[$DATE_STR][$TIME_STR][$MOD][$MODULE_NAME][Passed][Параметр №33 BATTERY_PERCENT: FILE -> $BATTERY_PERCENT DB -> $DB_BATTERY_PERCENT значения совпали]" >> $LOG
     ((i++))
     if [ "$i" -ge "$COUNTERS" ]; then
-        # Запускаем подменю программы
         $ACTIVE_DIR/ModSimData.sh
         $ACTIVE_DIR/ModARC3.sh
         $ACTIVE_DIR/ModARC4.sh
@@ -1914,7 +1810,6 @@ else
     echo "[$DATE_STR][$TIME_STR][$MOD][$MODULE_NAME][Failed][Параметр №33 BATTERY_PERCENT: FILE -> $BATTERY_PERCENT DB -> $DB_BATTERY_PERCENT значения не совпали]" >> $LOG
     ((i++))
     if [ "$i" -ge "$COUNTERS" ]; then
-        # Запускаем подменю программы
         $ACTIVE_DIR/ModSimData.sh
         $ACTIVE_DIR/ModARC3.sh
         $ACTIVE_DIR/ModARC4.sh
@@ -1953,7 +1848,6 @@ if echo "$STR1" | grep -wq "$STR2"; then
     echo "[$DATE_STR][$TIME_STR][$MOD][$MODULE_NAME][Passed][Параметр №34 TCP_ADDRESS2: FILE -> $TCP_ADDRESS2 DB -> $DB_TCP_ADDRESS2 значения совпали]" >> $LOG
     ((i++))
     if [ "$i" -ge "$COUNTERS" ]; then
-        # Запускаем подменю программы
         exit 0
     fi
 else
@@ -1964,7 +1858,6 @@ else
     echo "[$DATE_STR][$TIME_STR][$MOD][$MODULE_NAME][Failed][Параметр №34 TCP_ADDRESS2: FILE -> $TCP_ADDRESS2 DB -> $DB_TCP_ADDRESS2 значения не совпали]" >> $LOG
     ((i++))
     if [ "$i" -ge "$COUNTERS" ]; then
-        # Запускаем подменю программы
         exit 0
     fi
 fi
@@ -1990,7 +1883,6 @@ if [ -n "$VERS_K" ]; then
             echo "[$DATE_STR][$TIME_STR][$MOD][$MODULE_NAME][Passed][Параметр №35 AUTO_OFF_REZREP: FILE -> $AUTO_OFF_REZREP DB -> $DB_AUTO_OFF_REZREP значения совпали]" >> $LOG
             ((i++))
             if [ "$i" -ge "$COUNTERS" ]; then
-                # Запускаем подменю программы
                 exit 0
             fi
         else
@@ -2001,7 +1893,6 @@ if [ -n "$VERS_K" ]; then
             echo "[$DATE_STR][$TIME_STR][$MOD][$MODULE_NAME][Failed][Параметр №35 AUTO_OFF_REZREP: FILE -> $AUTO_OFF_REZREP DB -> $DB_AUTO_OFF_REZREP значения не совпали]" >> $LOG
             ((i++))
             if [ "$i" -ge "$COUNTERS" ]; then
-                # Запускаем подменю программы
                 exit 0
             fi
         fi
@@ -2013,7 +1904,6 @@ if [ -n "$VERS_K" ]; then
         echo "[$DATE_STR][$TIME_STR][$MOD][$MODULE_NAME][Passed][Параметр №35 reserved]" >> $LOG
         ((i++))
         if [ "$i" -ge "$COUNTERS" ]; then
-            # Запускаем подменю программы
             exit 0
         fi
     fi
@@ -2037,7 +1927,6 @@ else
             echo "[$DATE_STR][$TIME_STR][$MOD][$MODULE_NAME][Passed][Параметр №35 AUTO_OFF_REZREP: FILE -> $AUTO_OFF_REZREP DB -> $DB_AUTO_OFF_REZREP значения совпали]" >> $LOG
             ((i++))
             if [ "$i" -ge "$COUNTERS" ]; then
-                # Запускаем подменю программы
                 exit 0
             fi
         else
@@ -2048,7 +1937,6 @@ else
             echo "[$DATE_STR][$TIME_STR][$MOD][$MODULE_NAME][Failed][Параметр №35 AUTO_OFF_REZREP: FILE -> $AUTO_OFF_REZREP DB -> $DB_AUTO_OFF_REZREP значения не совпали]" >> $LOG
             ((i++))
             if [ "$i" -ge "$COUNTERS" ]; then
-                # Запускаем подменю программы
                 exit 0
             fi
         fi
@@ -2060,14 +1948,12 @@ else
         echo "[$DATE_STR][$TIME_STR][$MOD][$MODULE_NAME][Passed][Параметр №35 reserved]" >> $LOG
         ((i++))
         if [ "$i" -ge "$COUNTERS" ]; then
-            # Запускаем подменю программы
             exit 0
         fi
     fi
 fi
 
 # 36 SERIAL_BOARD   //SERIAL_NUMBER_BOARD (char14) - серийный номер платы. . Cм.описание NUMBER_BOARD2.
-# Получения значения из БД
 export PGPASSWORD=$Password
 DB_SERIAL_BOARD=$(psql -U $Login -h $Host -p $Port -d $Name -tA -c "select value from info_params.device_info_params
 where device_id=$device_id and attribute_id=2673;")
@@ -2084,7 +1970,6 @@ if echo "$STR1" | grep -wq "$STR2"; then
     echo "[$DATE_STR][$TIME_STR][$MOD][$MODULE_NAME][Passed][Параметр №36 SERIAL_BOARD: FILE -> $SERIAL_BOARD DB -> $DB_SERIAL_BOARD значения совпали]" >> $LOG
     ((i++))
     if [ "$i" -ge "$COUNTERS" ]; then
-        # Запускаем подменю программы
         exit 0
     fi
 else
@@ -2095,13 +1980,11 @@ else
     echo "[$DATE_STR][$TIME_STR][$MOD][$MODULE_NAME][Failed][Параметр №36 SERIAL_BOARD: FILE -> $SERIAL_BOARD DB -> $DB_SERIAL_BOARD значения не совпали]" >> $LOG
     ((i++))
     if [ "$i" -ge "$COUNTERS" ]; then
-        # Запускаем подменю программы
         exit 0
     fi
 fi
 
 # 37 SGS_PHONE2 //SMS_PHONE2 (char14) - резерв
-# Получения значения из БД
 # export PGPASSWORD=$Password
 #DB_SGS_PHONE2=$(psql -U $Login -h $Host -p $Port -d $Name -tA -c "select value from info_params.device_info_params
 #where device_id=$device_id and attribute_id=2673;")
@@ -2118,7 +2001,6 @@ if echo "$STR1" | grep -wq "$STR2"; then
     echo "[$DATE_STR][$TIME_STR][$MOD][$MODULE_NAME][Passed][Параметр №37 SGS_PHONE2: FILE -> $SGS_PHONE2 DB -> $DB_SGS_PHONE2 значения совпали]" >> $LOG
     ((i++))
     if [ "$i" -ge "$COUNTERS" ]; then
-        # Запускаем подменю программы
         exit 0
     fi
 else
@@ -2129,13 +2011,11 @@ else
     echo "[$DATE_STR][$TIME_STR][$MOD][$MODULE_NAME][Failed][Параметр №37 SGS_PHONE2: FILE -> $SGS_PHONE2 DB -> $DB_SGS_PHONE2 значения не совпали]" >> $LOG
     ((i++))
     if [ "$i" -ge "$COUNTERS" ]; then
-        # Запускаем подменю программы
         exit 0
     fi
 fi
 
 # 38 WARNINGSTATE   //STATUS_WARNING (uint32) - текущий статус предупреждений.
-# Получения значения из БД
 export PGPASSWORD=$Password
 DB_WARNINGSTATE=$(psql -U $Login -h $Host -p $Port -d $Name -tA -c "select value from info_params.device_info_params
 where device_id=$device_id and attribute_id=75;")
@@ -2153,7 +2033,6 @@ if echo "$STR1" | grep -wq "$STR2"; then
     echo "[$DATE_STR][$TIME_STR][$MOD][$MODULE_NAME][Passed][Параметр №38 WARNINGSTATE: FILE -> $WARNINGSTATE DB -> $DB_WARNINGSTATE значения совпали]" >> $LOG
     ((i++))
     if [ "$i" -ge "$COUNTERS" ]; then
-        # Запускаем подменю программы
         exit 0
     fi
 else
@@ -2164,13 +2043,11 @@ else
     echo "[$DATE_STR][$TIME_STR][$MOD][$MODULE_NAME][Failed][Параметр №38 WARNINGSTATE: FILE -> $WARNINGSTATE DB -> $DB_WARNINGSTATE значения не совпали]" >> $LOG
     ((i++))
     if [ "$i" -ge "$COUNTERS" ]; then
-        # Запускаем подменю программы
         exit 0
     fi
 fi
 
 # 39 ALARMSTATE     //STATUS_ALARM (uint32) - текущий статус тревог.
-# Получения значения из БД
 export PGPASSWORD=$Password
 DB_ALARMSTATE=$(psql -U $Login -h $Host -p $Port -d $Name -tA -c "select value from info_params.device_info_params
 where device_id=$device_id and attribute_id=74;")
@@ -2188,7 +2065,6 @@ if echo "$STR1" | grep -wq "$STR2"; then
     echo "[$DATE_STR][$TIME_STR][$MOD][$MODULE_NAME][Passed][Параметр №39 ALARMSTATE: FILE -> $ALARMSTATE DB -> $DB_ALARMSTATE значения совпали]" >> $LOG
     ((i++))
     if [ "$i" -ge "$COUNTERS" ]; then
-        # Запускаем подменю программы
         exit 0
     fi
 else
@@ -2199,13 +2075,11 @@ else
     echo "[$DATE_STR][$TIME_STR][$MOD][$MODULE_NAME][Failed][Параметр №39 ALARMSTATE: FILE -> $ALARMSTATE DB -> $DB_ALARMSTATE значения не совпали]" >> $LOG
     ((i++))
     if [ "$i" -ge "$COUNTERS" ]; then
-        # Запускаем подменю программы
         exit 0
     fi
 fi
 
 # 40 CRASHSTATE     //STATUS_CRASH (uint32) - текущий статус аварий.
-# Получения значения из БД
 export PGPASSWORD=$Password
 DB_CRASHSTATE=$(psql -U $Login -h $Host -p $Port -d $Name -tA -c "select value from info_params.device_info_params
 where device_id=$device_id and attribute_id=73;")
@@ -2223,7 +2097,6 @@ if echo "$STR1" | grep -wq "$STR2"; then
     echo "[$DATE_STR][$TIME_STR][$MOD][$MODULE_NAME][Passed][Параметр №40 CRASHSTATE: FILE -> $CRASHSTATE DB -> $DB_CRASHSTATE значения совпали]" >> $LOG
     ((i++))
     if [ "$i" -ge "$COUNTERS" ]; then
-        # Запускаем подменю программы
         exit 0
     fi
 else
@@ -2234,13 +2107,11 @@ else
     echo "[$DATE_STR][$TIME_STR][$MOD][$MODULE_NAME][Failed][Параметр №40 CRASHSTATE: FILE -> $CRASHSTATE DB -> $DB_CRASHSTATE значения не совпали]" >> $LOG
     ((i++))
     if [ "$i" -ge "$COUNTERS" ]; then
-        # Запускаем подменю программы
         exit 0
     fi
 fi
 
 # 41 STATUS_STORY    STATUS_STORY (uint64) - текущее состояние регистров ПТА. 0-15 биты П, 16-31 биты Т, 32-47 биты- А.
-# Получения значения из БД
 export PGPASSWORD=$Password
 DB_STATUS_STORY=$(psql -U $Login -h $Host -p $Port -d $Name -tA -c "select value from info_params.device_info_params
 where device_id=$device_id and attribute_id=110;")
@@ -2258,7 +2129,6 @@ if echo "$STR1" | grep -wq "$STR2"; then
     echo "[$DATE_STR][$TIME_STR][$MOD][$MODULE_NAME][Passed][Параметр №41 STATUS_STORY: FILE -> $STATUS_STORY DB -> $DB_STATUS_STORY значения совпали]" >> $LOG
     ((i++))
     if [ "$i" -ge "$COUNTERS" ]; then
-        # Запускаем подменю программы
         exit 0
     fi
 else
@@ -2269,7 +2139,6 @@ else
     echo "[$DATE_STR][$TIME_STR][$MOD][$MODULE_NAME][Failed][Параметр №41 STATUS_STORY: FILE -> $STATUS_STORY DB -> $DB_STATUS_STORY значения не совпали]" >> $LOG
     ((i++))
     if [ "$i" -ge "$COUNTERS" ]; then
-        # Запускаем подменю программы
         exit 0
     fi
 fi
@@ -2291,7 +2160,6 @@ if echo "$STR1" | grep -wq "$STR2"; then
     echo "[$DATE_STR][$TIME_STR][$MOD][$MODULE_NAME][Passed][Параметр №42 ERROR_SESSION_SERVER2: FILE -> $ERROR_SESSION_SERVER2 DB -> $DB_ERROR_SESSION_SERVER2 значения совпали]" >> $LOG
     ((i++))
     if [ "$i" -ge "$COUNTERS" ]; then
-        # Запускаем подменю программы
         exit 0
     fi
 else
@@ -2302,7 +2170,6 @@ else
     echo "[$DATE_STR][$TIME_STR][$MOD][$MODULE_NAME][Failed][Параметр №42 ERROR_SESSION_SERVER2: FILE -> $ERROR_SESSION_SERVER2 DB -> $DB_ERROR_SESSION_SERVER2 значения не совпали]" >> $LOG
     ((i++))
     if [ "$i" -ge "$COUNTERS" ]; then
-        # Запускаем подменю программы
         exit 0
     fi
 fi
@@ -2326,7 +2193,6 @@ if [ -n "$VERS_K" ]; then
             echo "[$DATE_STR][$TIME_STR][$MOD][$MODULE_NAME][Passed][Параметр №43 CNT_REZREP: FILE -> $CNT_REZREP DB -> $DB_CNT_REZREP значения совпали]" >> $LOG
             ((i++))
             if [ "$i" -ge "$COUNTERS" ]; then
-                # Запускаем подменю программы
                 exit 0
             fi
         else
@@ -2337,7 +2203,6 @@ if [ -n "$VERS_K" ]; then
             echo "[$DATE_STR][$TIME_STR][$MOD][$MODULE_NAME][Failed][Параметр №43 CNT_REZREP: FILE -> $CNT_REZREP DB -> $DB_CNT_REZREP значения не совпали]" >> $LOG
             ((i++))
             if [ "$i" -ge "$COUNTERS" ]; then
-                # Запускаем подменю программы
                 exit 0
             fi
         fi
@@ -2349,7 +2214,6 @@ if [ -n "$VERS_K" ]; then
         echo "[$DATE_STR][$TIME_STR][$MOD][$MODULE_NAME][Passed][Параметр №43 reserved]" >> $LOG
         ((i++))
         if [ "$i" -ge "$COUNTERS" ]; then
-            # Запускаем подменю программы
             exit 0
         fi
     fi
@@ -2371,7 +2235,6 @@ else
             echo "[$DATE_STR][$TIME_STR][$MOD][$MODULE_NAME][Passed][Параметр №43 CNT_REZREP: FILE -> $CNT_REZREP DB -> $DB_CNT_REZREP значения совпали]" >> $LOG
             ((i++))
             if [ "$i" -ge "$COUNTERS" ]; then
-                # Запускаем подменю программы
                 exit 0
             fi
         else
@@ -2382,7 +2245,6 @@ else
             echo "[$DATE_STR][$TIME_STR][$MOD][$MODULE_NAME][Failed][Параметр №43 CNT_REZREP: FILE -> $CNT_REZREP DB -> $DB_CNT_REZREP значения не совпали]" >> $LOG
             ((i++))
             if [ "$i" -ge "$COUNTERS" ]; then
-                # Запускаем подменю программы
                 exit 0
             fi
         fi
@@ -2394,7 +2256,6 @@ else
         echo "[$DATE_STR][$TIME_STR][$MOD][$MODULE_NAME][Passed][Параметр №43 reserved]" >> $LOG
         ((i++))
         if [ "$i" -ge "$COUNTERS" ]; then
-            # Запускаем подменю программы
             exit 0
         fi
     fi
@@ -2417,7 +2278,6 @@ if echo "$STR1" | grep -wq "$STR2"; then
     echo "[$DATE_STR][$TIME_STR][$MOD][$MODULE_NAME][Passed][Параметр №44 BATTERY_TELEMETRY: FILE -> $BATTERY_TELEMETRY DB -> $DB_BATTERY_TELEMETRY значения совпали]" >> $LOG
     ((i++))
     if [ "$i" -ge "$COUNTERS" ]; then
-        # Запускаем подменю программы
         $ACTIVE_DIR/ModSimData.sh
         $ACTIVE_DIR/ModARC3.sh
         $ACTIVE_DIR/ModARC4.sh
@@ -2436,7 +2296,6 @@ else
     echo "[$DATE_STR][$TIME_STR][$MOD][$MODULE_NAME][Failed][Параметр №44 BATTERY_TELEMETRY: FILE -> $BATTERY_TELEMETRY DB -> $DB_BATTERY_TELEMETRY значения не совпали]" >> $LOG
     ((i++))
     if [ "$i" -ge "$COUNTERS" ]; then
-        # Запускаем подменю программы
         $ACTIVE_DIR/ModSimData.sh
         $ACTIVE_DIR/ModARC3.sh
         $ACTIVE_DIR/ModARC4.sh
@@ -2470,7 +2329,6 @@ if echo "$STR1" | grep -wq "$STR2"; then
     echo "[$DATE_STR][$TIME_STR][$MOD][$MODULE_NAME][Passed][Параметр №45 CURRENT_FLOW: FILE -> $CURRENT_FLOW DB -> $DB_CURRENT_FLOW значения совпали]" >> $LOG
     ((i++))
     if [ "$i" -ge "$COUNTERS" ]; then
-        # Запускаем подменю программы
         exit 0
     fi
 else
@@ -2481,7 +2339,6 @@ else
     echo "[$DATE_STR][$TIME_STR][$MOD][$MODULE_NAME][Failed][Параметр №45 CURRENT_FLOW: FILE -> $CURRENT_FLOW DB -> $DB_CURRENT_FLOW значения не совпали]" >> $LOG
     ((i++))
     if [ "$i" -ge "$COUNTERS" ]; then
-        # Запускаем подменю программы
         exit 0
     fi
 fi
@@ -2507,7 +2364,6 @@ if echo "$STR1" | grep -wq "$STR2"; then
     echo "[$DATE_STR][$TIME_STR][$MOD][$MODULE_NAME][Passed][Параметр №46 CURRENT_FLOW_DISPL: FILE -> $CURRENT_FLOW_DISPL DB -> $DB_CURRENT_FLOW_DISPL значения совпали]" >> $LOG
     ((i++))
     if [ "$i" -ge "$COUNTERS" ]; then
-        # Запускаем подменю программы
         exit 0
     fi
 else
@@ -2518,7 +2374,6 @@ else
     echo "[$DATE_STR][$TIME_STR][$MOD][$MODULE_NAME][Failed][Параметр №46 CURRENT_FLOW_DISPL: FILE -> $CURRENT_FLOW_DISPL DB -> $DB_CURRENT_FLOW_DISPL значения не совпали]" >> $LOG
     ((i++))
     if [ "$i" -ge "$COUNTERS" ]; then
-        # Запускаем подменю программы
         exit 0
     fi
 fi
@@ -2579,7 +2434,6 @@ if echo "$STR1" | grep -wq "$STR2"; then
     echo "[$DATE_STR][$TIME_STR][$MOD][$MODULE_NAME][Passed][Параметр №48 CURRENT_COUNTER_GLOB: FILE -> $CURRENT_COUNTER_GLOB DB -> $DB_CURRENT_COUNTER_GLOB значения совпали]" >> $LOG
     ((i++))
     if [ "$i" -ge "$COUNTERS" ]; then
-        # Запускаем подменю программы
         $ACTIVE_DIR/ModSimData.sh
         $ACTIVE_DIR/ModARC3.sh
         $ACTIVE_DIR/ModARC4.sh
@@ -2598,7 +2452,6 @@ else
     echo "[$DATE_STR][$TIME_STR][$MOD][$MODULE_NAME][Failed][Параметр №48 CURRENT_COUNTER_GLOB: FILE -> $CURRENT_COUNTER_GLOB DB -> $DB_CURRENT_COUNTER_GLOB значения не совпали]" >> $LOG
     ((i++))
     if [ "$i" -ge "$COUNTERS" ]; then
-        # Запускаем подменю программы
         $ACTIVE_DIR/ModSimData.sh
         $ACTIVE_DIR/ModARC3.sh
         $ACTIVE_DIR/ModARC4.sh
@@ -2628,7 +2481,6 @@ if echo "$STR1" | grep -wq "$STR2"; then
     echo "[$DATE_STR][$TIME_STR][$MOD][$MODULE_NAME][Passed][Параметр №49 STATUS_RS485: FILE -> $STATUS_RS485 DB -> $DB_STATUS_RS485 значения совпали]" >> $LOG
     ((i++))
     if [ "$i" -ge "$COUNTERS" ]; then
-        # Запускаем подменю программы
         $ACTIVE_DIR/ModSimData.sh
         $ACTIVE_DIR/ModARC3.sh
         $ACTIVE_DIR/ModARC4.sh
@@ -2647,7 +2499,6 @@ else
     echo "[$DATE_STR][$TIME_STR][$MOD][$MODULE_NAME][Failed][Параметр №49 STATUS_RS485: FILE -> $STATUS_RS485 DB -> $DB_STATUS_RS485 значения не совпали]" >> $LOG
     ((i++))
     if [ "$i" -ge "$COUNTERS" ]; then
-        # Запускаем подменю программы
         $ACTIVE_DIR/ModSimData.sh
         $ACTIVE_DIR/ModARC3.sh
         $ACTIVE_DIR/ModARC4.sh
@@ -2677,7 +2528,6 @@ if echo "$STR1" | grep -wq "$STR2"; then
     echo "[$DATE_STR][$TIME_STR][$MOD][$MODULE_NAME][Passed][Параметр №50 SIM_ENABLE: FILE -> $SIM_ENABLE DB -> $DB_SIM_ENABLE значения совпали]" >> $LOG
     ((i++))
     if [ "$i" -ge "$COUNTERS" ]; then
-        # Запускаем подменю программы
         exit 0
     fi
 else
@@ -2688,7 +2538,6 @@ else
     echo "[$DATE_STR][$TIME_STR][$MOD][$MODULE_NAME][Failed][Параметр №50 SIM_ENABLE: FILE -> $SIM_ENABLE DB -> $DB_SIM_ENABLE значения не совпали]" >> $LOG
     ((i++))
     if [ "$i" -ge "$COUNTERS" ]; then
-        # Запускаем подменю программы
         exit 0
     fi
 fi
@@ -2710,7 +2559,6 @@ if echo "$STR1" | grep -wq "$STR2"; then
     echo "[$DATE_STR][$TIME_STR][$MOD][$MODULE_NAME][Passed][Параметр №51 SIM_ACTIV: FILE -> $SIM_ACTIV DB -> $DB_SIM_ACTIV значения совпали]" >> $LOG
     ((i++))
     if [ "$i" -ge "$COUNTERS" ]; then
-        # Запускаем подменю программы
         exit 0
     fi
 else
@@ -2721,7 +2569,6 @@ else
     echo "[$DATE_STR][$TIME_STR][$MOD][$MODULE_NAME][Failed][Параметр №51 SIM_ACTIV: FILE -> $SIM_ACTIV DB -> $DB_SIM_ACTIV значения не совпали]" >> $LOG
     ((i++))
     if [ "$i" -ge "$COUNTERS" ]; then
-        # Запускаем подменю программы
         exit 0
     fi
 fi
@@ -2743,7 +2590,6 @@ if echo "$STR1" | grep -wq "$STR2"; then
     echo "[$DATE_STR][$TIME_STR][$MOD][$MODULE_NAME][Passed][Параметр №52 MODEM_IMEI: FILE -> $MODEM_IMEI DB -> $DB_MODEM_IMEI значения совпали]" >> $LOG
     ((i++))
     if [ "$i" -ge "$COUNTERS" ]; then
-        # Запускаем подменю программы
         exit 0
     fi
 else
@@ -2754,7 +2600,6 @@ else
     echo "[$DATE_STR][$TIME_STR][$MOD][$MODULE_NAME][Failed][Параметр №52 MODEM_IMEI: FILE -> $MODEM_IMEI DB -> $DB_MODEM_IMEI значения не совпали]" >> $LOG
     ((i++))
     if [ "$i" -ge "$COUNTERS" ]; then
-        # Запускаем подменю программы
         exit 0
     fi
 fi
@@ -2776,7 +2621,6 @@ if echo "$STR1" | grep -wq "$STR2"; then
     echo "[$DATE_STR][$TIME_STR][$MOD][$MODULE_NAME][Passed][Параметр №53 EN_ARCHIVE_SIM3: FILE -> $EN_ARCHIVE_SIM3 DB -> $DB_EN_ARCHIVE_SIM3 значения совпали]" >> $LOG
     ((i++))
     if [ "$i" -ge "$COUNTERS" ]; then
-        # Запускаем подменю программы
         exit 0
     fi
 else
@@ -2787,7 +2631,6 @@ else
     echo "[$DATE_STR][$TIME_STR][$MOD][$MODULE_NAME][Failed][Параметр №53 EN_ARCHIVE_SIM3: FILE -> $EN_ARCHIVE_SIM3 DB -> $DB_EN_ARCHIVE_SIM3 значения  не совпали]" >> $LOG
     ((i++))
     if [ "$i" -ge "$COUNTERS" ]; then
-        # Запускаем подменю программы
         exit 0
     fi
 fi
@@ -2809,7 +2652,6 @@ if echo "$STR1" | grep -wq "$STR2"; then
     echo "[$DATE_STR][$TIME_STR][$MOD][$MODULE_NAME][Passed][Параметр №54 TEMP_BOARD: FILE -> $TEMP_BOARD DB -> $DB_TEMP_BOARD значения совпали]" >> $LOG
     ((i++))
     if [ "$i" -ge "$COUNTERS" ]; then
-        # Запускаем подменю программы
         $ACTIVE_DIR/ModSimData.sh
         $ACTIVE_DIR/ModARC3.sh
         $ACTIVE_DIR/ModARC4.sh
@@ -2828,7 +2670,6 @@ else
     echo "[$DATE_STR][$TIME_STR][$MOD][$MODULE_NAME][Failed][Параметр №54 TEMP_BOARD: FILE -> $TEMP_BOARD DB -> $DB_TEMP_BOARD значения не совпали]" >> $LOG
     ((i++))
     if [ "$i" -ge "$COUNTERS" ]; then
-        # Запускаем подменю программы
         $ACTIVE_DIR/ModSimData.sh
         $ACTIVE_DIR/ModARC3.sh
         $ACTIVE_DIR/ModARC4.sh
@@ -2858,7 +2699,6 @@ if echo "$STR1" | grep -wq "$STR2"; then
     echo "[$DATE_STR][$TIME_STR][$MOD][$MODULE_NAME][Passed][Параметр №55 EXT_ANT: FILE -> $EXT_ANT DB -> $DB_EXT_ANT значения совпали]" >> $LOG
     ((i++))
     if [ "$i" -ge "$COUNTERS" ]; then
-        # Запускаем подменю программы
         $ACTIVE_DIR/ModSimData.sh
         $ACTIVE_DIR/ModARC3.sh
         $ACTIVE_DIR/ModARC4.sh
@@ -2877,7 +2717,6 @@ else
     echo "[$DATE_STR][$TIME_STR][$MOD][$MODULE_NAME][Failed][Параметр №55 EXT_ANT: FILE -> $EXT_ANT DB -> $DB_EXT_ANT значения совпали]" >> $LOG
     ((i++))
     if [ "$i" -ge "$COUNTERS" ]; then
-        # Запускаем подменю программы
         $ACTIVE_DIR/ModSimData.sh
         $ACTIVE_DIR/ModARC3.sh
         $ACTIVE_DIR/ModARC4.sh
@@ -2907,7 +2746,6 @@ if echo "$STR1" | grep -wq "$STR2"; then
     echo "[$DATE_STR][$TIME_STR][$MOD][$MODULE_NAME][Passed][Параметр №56 GAS_MON: FILE -> $GAS_MON DB -> $DB_GAS_MON значения совпали]" >> $LOG
     ((i++))
     if [ "$i" -ge "$COUNTERS" ]; then
-        # Запускаем подменю программы
         exit 0
     fi
 else
@@ -2918,7 +2756,6 @@ else
     echo "[$DATE_STR][$TIME_STR][$MOD][$MODULE_NAME][Failed][Параметр №56 GAS_MON: FILE -> $GAS_MON DB -> $DB_GAS_MON значения не совпали]" >> $LOG
     ((i++))
     if [ "$i" -ge "$COUNTERS" ]; then
-        # Запускаем подменю программы
         exit 0
     fi
 fi
@@ -2940,7 +2777,6 @@ if echo "$STR1" | grep -wq "$STR2"; then
     echo "[$DATE_STR][$TIME_STR][$MOD][$MODULE_NAME][Passed][Параметр №57 LASTMONARCNUM: FILE -> $LASTMONARCNUM DB -> $DB_LASTMONARCNUM значения совпали]" >> $LOG
     ((i++))
     if [ "$i" -ge "$COUNTERS" ]; then
-        # Запускаем подменю программы
         $ACTIVE_DIR/ModSimData.sh
         $ACTIVE_DIR/ModARC3.sh
         $ACTIVE_DIR/ModARC4.sh
@@ -2959,7 +2795,6 @@ else
     echo "[$DATE_STR][$TIME_STR][$MOD][$MODULE_NAME][Failed][Параметр №57 LASTMONARCNUM: FILE -> $LASTMONARCNUM DB -> $DB_LASTMONARCNUM значения не совпали]" >> $LOG
     ((i++))
     if [ "$i" -ge "$COUNTERS" ]; then
-        # Запускаем подменю программы
         $ACTIVE_DIR/ModSimData.sh
         $ACTIVE_DIR/ModARC3.sh
         $ACTIVE_DIR/ModARC4.sh

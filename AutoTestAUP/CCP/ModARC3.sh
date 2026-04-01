@@ -106,7 +106,7 @@ else
     VSUND=$(echo "$arcdata" | jq -r '.VSUND')
 
     F_devdate=$(echo "${arr[1]}" | sed 's/,/ /g')
-    if [ -n "${arr[2]}" ]; then
+    if [ -n "${arr[2]}" ] && [ "${arr[2]}" != 0 ]; then
         F_VSUND=$(echo "${arr[2]}" | grep -oE '[0-9]+')
         F_VSUND=$(echo "scale=4; $F_VSUND * $VOLUME_PULSE" | bc 2>/dev/null)
         [[ "$F_VSUND" == *0 ]] && F_VSUND=$(echo "$F_VSUND" | sed 's/0*$//')
@@ -115,7 +115,7 @@ else
         F_VSUND=0
     fi
 
-    if [ -n "${arr[12]}" ]; then
+    if [ -n "${arr[12]}" ] && [ "${arr[12]}" != 0 ]; then
         F_VSTOT=$(echo "${arr[12]}" | grep -oE '[0-9]+' 2>/dev/null)
         F_VSTOT=$(echo "scale=4; $F_VSTOT * $VOLUME_PULSE" | bc)
         [[ "$F_VSTOT" == *0 ]] && F_VSTOT=$(echo "$F_VSTOT" | sed 's/0*$//')
@@ -123,6 +123,8 @@ else
     else
         F_VSTOT=$F_VSUND
     fi
+
+
     F_T=${arr[3]}
     F_T_OUT=${arr[4]}
     F_K=${arr[5]}
