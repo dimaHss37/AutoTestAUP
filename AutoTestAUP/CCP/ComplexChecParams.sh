@@ -88,9 +88,7 @@ for ((i=1; i<=$files; i++)); do
     name=$(ls $ACTIVE_DIR/rdt | column -t | awk $ind)
     vers=$(cat $ACTIVE_DIR/rdt/$name | grep vers -i | grep -oE '[0-9]*\.?[0-9]+')
     prot=$(cat $ACTIVE_DIR/rdt/$name | grep "VER_PROTOCOL=" | grep -oE '[0-9]+')
-    if [ -z $prot ]; then
-    prot=0
-    fi
+    [[ -z $prot ]] && prot=0
     prot="Протокол:$prot"
     Application=$(cat $ACTIVE_DIR/rdt/$name | head -n 1)
     if echo "$Application" | grep -wq "Application"; then
@@ -99,8 +97,10 @@ for ((i=1; i<=$files; i++)); do
     fi
      echo -e "$name $vers $prot" >> $ACTIVE_DIR/tmp/list1.tmp
 done
+
 cat $ACTIVE_DIR/tmp/list1.tmp | column -t >> $ACTIVE_DIR/tmp/list2.tmp
 list=$(cat $ACTIVE_DIR/tmp/list2.tmp | nl -s ' -> ')
+
 clear
 echo ""
 for ((i=1; i<=$files; i++)); do
@@ -111,7 +111,7 @@ done
 
  echo ""
  read -p "Укажите номер файла для обработки: " NUM_FILE
- if [[ ! "$NUM_FILE" =~ ^[0-9]+$ ]] || (( NUM_FILE > files )); then
+ if [[ ! "$NUM_FILE" =~ ^[0-9]+$ ]] || (( NUM_FILE > files )) || [[ "$NUM_FILE" = 0 ]]; then
      echo ""
      echo "Неверный ввод"
      sleep 3
@@ -148,7 +148,6 @@ if [[ "$P_NAME_FILE" == 3 ]] && [[ "$NAME_FILE" =~ ^[0-9] ]]; then
 else
     devnum=$(echo "$NAME_FILE" | sed 's/.*_//' | cut -d'.' -f1)
 fi
-
 
 # назватие модуля
 MODULE_NAME="ComplexChecParams"
@@ -449,6 +448,7 @@ MOD="ACTUAL COUNTERS"
 # подщёт количества параметров в файле
 COUNTERS=$(tac $TARGET | grep -m 1 "ACTUAL COUNTERS" -a1 | head -n 1 | grep -o ";" | wc -l)
 COUNTERS=$((COUNTERS + 1))
+
 echo ""
 echo -e "\e[1m[ACTUAL COUNTERS]\e[0m"
 echo "---------------------------"
