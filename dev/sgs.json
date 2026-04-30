@@ -1,0 +1,395 @@
+{
+  "Directories": {
+    "TemplateDir": "",
+    "ArcDir": ["/opt", "SGS_ExtraPlus", "Arc", "In"],
+    "LogDir": ["/opt", "SGS_ExtraPlus", "Log"],
+    "BackupDir": "",
+    "AupDir": ["/opt", "SGS_ExtraPlus", "Arc", "In"],
+    "AupDir2": ["C:\\", "SGS-Server", "Arc", "In"]
+  },
+  "DatabaseConnection": {
+    "Server": {
+      "DatabaseType": "PostgreSQL",
+      "PostgreSQL": {
+        "SGS": {
+          "Name": "sgs",
+          "Host": "172.22.0.96",
+          "Port": 5432,
+          "Login": "GazSetLogin",
+          "Password": "masterGazSetLogin"
+        }
+      },
+      "Firebird": {
+        "SGS": {
+          "Name": "../sgs.fdb",
+          "Host": "127.0.0.1",
+          "Port": 3050,
+          "Login": "SYSDBA",
+          "Password": "Pg4XEQ4qJDcS",
+          "AuthPlugin": "Legacy_Auth",
+          "WireCrypt": "false"
+        },
+        "TMR": {
+          "Name": "../tmr.fdb",
+          "Host": "127.0.0.1",
+          "Port": 3050,
+          "Login": "SYSDBA",
+          "Password": "Pg4XEQ4qJDcS",
+          "AuthPlugin": "Legacy_Auth",
+          "WireCrypt": "false"
+        },
+        "SRV": {
+          "Name": "../srv_sgs.fdb",
+          "Host": "127.0.0.1",
+          "Port": 3050,
+          "Login": "SYSDBA",
+          "Password": "Pg4XEQ4qJDcS",
+          "AuthPlugin": "Legacy_Auth",
+          "WireCrypt": "false"
+        },
+        "CON": {
+          "Name": "../connect.fdb",
+          "Host": "127.0.0.1",
+          "Port": 3050,
+          "Login": "SYSDBA",
+          "Password": "Pg4XEQ4qJDcS",
+          "AuthPlugin": "Legacy_Auth",
+          "WireCrypt": "false"
+        },
+        "ALP": {
+          "Name": "../alp.fdb",
+          "Host": "127.0.0.1",
+          "Port": 3050,
+          "Login": "SYSDBA",
+          "Password": "Pg4XEQ4qJDcS",
+          "AuthPlugin": "Legacy_Auth",
+          "WireCrypt": "false"
+        }
+      }
+    },
+    "Local": {
+      "DatabaseType": "PostgreSQL",
+      "PostgreSQL": {
+        "SGS": {
+          "Name": "sgs_new1",
+          "Host": "127.0.0.1",
+          "Port": 5432,
+          "Login": "GazSetLogin",
+          "Password": "masterGazSetLogin"
+        }
+      },
+      "Firebird": {
+        "SGS": {
+          "Name": "../sgs.fdb",
+          "Host": "127.0.0.1",
+          "Port": 3050,
+          "Login": "SYSDBA",
+          "Password": "Pg4XEQ4qJDcS",
+          "AuthPlugin": "Legacy_Auth",
+          "WireCrypt": "false"
+        },
+        "TMR": {
+          "Name": "../tmr.fdb",
+          "Host": "127.0.0.1",
+          "Port": 3050,
+          "Login": "SYSDBA",
+          "Password": "Pg4XEQ4qJDcS",
+          "AuthPlugin": "Legacy_Auth",
+          "WireCrypt": "false"
+        },
+        "SRV": {
+          "Name": "../srv_sgs.fdb",
+          "Host": "127.0.0.1",
+          "Port": 3050,
+          "Login": "SYSDBA",
+          "Password": "Pg4XEQ4qJDcS",
+          "AuthPlugin": "Legacy_Auth",
+          "WireCrypt": "false"
+		  
+        },
+        "CON": {
+          "Name": "../connect.fdb",
+          "Host": "127.0.0.1",
+          "Port": 3050,
+          "Login": "SYSDBA",
+          "Password": "Pg4XEQ4qJDcS",
+          "AuthPlugin": "Legacy_Auth",
+          "WireCrypt": "false"
+        },
+        "ALP": {
+          "Name": "../alp.fdb",
+          "Host": "127.0.0.1",
+          "Port": 3050,
+          "Login": "SYSDBA",
+          "Password": "Pg4XEQ4qJDcS",
+          "AuthPlugin": "Legacy_Auth",
+          "WireCrypt": "false"
+        }
+      }
+    }
+  },
+
+  "DefaultUnits": {
+    "WorkCubes": "м3",
+    "StandCubes": "м3",
+    "Pressure": "бар",
+    "Temperature": "С"
+  },
+
+  "SGSSetupSession": {
+    "SetupCreationDateTime": "",
+    "SetupDate": "",
+    "SetupFileName": ""
+  },
+
+  "SGS_Guard": {
+    "Host": "127.0.0.1",
+    "Port": 50051
+  },
+  "LogSizeMB": 10,
+  "AUPService": {
+	"SGS_AUP_Support": {
+      "GasbeginOnly": "true",
+      "SeparateIntVolCalc": "false",
+      "DatabaseLocation": "Local",
+      "LogLevel": "I",
+      "LogSizeMB": 10,
+      "StalledTimeoutMin": 5
+    },
+    "SGS_AUP_ValidatorService": {
+      "Endpoint": {
+        "Host": "127.0.0.1",
+        "Port": 50002
+      },
+      "LogLevel": "I",
+      "IsEnabled": true
+    },
+    "SGS_AUP_WatcherService": {
+      "ScanIntervalSec": 90,
+      "CreateSGSFiles": false,
+      "Endpoint": {
+        "Host": "127.0.0.1",
+        "Port": 50001
+      },
+      "LogLevel": "I",
+      "IsEnabled": true
+    },
+    "SGS_AUP_DbWriterService": {
+      "IsEnabled": true,
+      "Endpoint": {
+        "Host": "127.0.0.1",
+        "Port": 50090
+      },
+      "LogLevel": "I",
+      "DatabaseLocation": "Local",
+      "ConnectionPool": {
+        "MaxOpenConns": 20,
+        "MaxIdleConns": 5,
+        "ConnMaxLifetime": 10,
+        "ConnMaxIdleTime": 5,
+        "RequestTimeout": 120,
+        "MonitoringEnabled": true,
+        "MonitoringInterval": 60
+      }
+    },
+    "SGS_AUP_SMTHandler": {
+      "Endpoint": {
+        "Host": "127.0.0.1",
+        "Port": 50003
+      },
+      "LogLevel": "I",
+      "IsEnabled": true
+    },
+    "SGS_AUP_TM07Handler": {
+      "Endpoint": {
+        "Host": "127.0.0.1",
+        "Port": 50004
+      },
+      "LogLevel": "I",
+      "IsEnabled":  false
+    },
+    "SGS_AUP_LIS200Handler": {
+      "Endpoint": {
+        "Host": "127.0.0.1",
+        "Port": 50005
+      },
+      "LogLevel": "I",
+      "IsEnabled": false
+    },
+    "SGS_AUP_IRVISHandler": {
+      "Endpoint": {
+        "Host": "127.0.0.1",
+        "Port": 50006
+      },
+      "LogLevel": "I",
+      "IsEnabled": false
+    },
+    "SGS_AUP_FLOWGASHandler": {
+      "Endpoint": {
+        "Host": "127.0.0.1",
+        "Port": 50007
+      },
+      "LogLevel": "I",
+      "IsEnabled": false
+    },
+    "SGS_AUP_FLOWSICHandler": {
+      "Endpoint": {
+        "Host": "127.0.0.1",
+        "Port": 50008
+      },
+      "LogLevel": "I",
+      "IsEnabled": false
+    },
+    "SGS_AUP_VKG2Handler": {
+      "Endpoint": {
+        "Host": "127.0.0.1",
+        "Port": 50009
+      },
+      "LogLevel": "I",
+      "IsEnabled": false
+    },
+    "SGS_AUP_SPG74xHandler": {
+      "Endpoint": {
+        "Host": "127.0.0.1",
+        "Port": 50010
+      },
+      "LogLevel": "I",
+      "IsEnabled": false
+    },
+    "SGS_AUP_SPG76xHandler": {
+      "Endpoint": {
+        "Host": "127.0.0.1",
+        "Port": 50011
+      },
+      "LogLevel": "I",
+      "IsEnabled": false
+    },
+    "SGS_AUP_UFGHandler": {
+      "Endpoint": {
+        "Host": "127.0.0.1",
+        "Port": 50012
+      },
+      "LogLevel": "I",
+      "IsEnabled": false
+    },
+    "SGS_AUP_GOBOYHandler": {
+      "Endpoint": {
+        "Host": "127.0.0.1",
+        "Port": 50013
+      },
+      "LogLevel": "I",
+      "IsEnabled": false
+    },
+    "SGS_AUP_BKHandler": {
+      "Endpoint": {
+        "Host": "127.0.0.1",
+        "Port": 50014
+      },
+      "LogLevel": "I",
+      "IsEnabled": false
+    },
+    "SGS_AUP_EK155Handler": {
+      "Endpoint": {
+        "Host": "127.0.0.1",
+        "Port": 50015
+      },
+      "LogLevel": "I",
+      "IsEnabled": false
+    },
+    "SGS_AUP_FLOWXHandler": {
+      "Endpoint": {
+        "Host": "127.0.0.1",
+        "Port": 50016
+      },
+      "LogLevel": "I",
+      "IsEnabled": false
+    },
+    "SGS_AUP_WKG3THandler": {
+      "Endpoint": {
+        "Host": "127.0.0.1",
+        "Port": 50017
+      },
+      "LogLevel": "I",
+      "IsEnabled": false
+    },
+    "SGS_AUP_VYMPEL500Handler": {
+      "Endpoint": {
+        "Host": "127.0.0.1",
+        "Port": 50018
+      },
+      "LogLevel": "I",
+      "IsEnabled": false
+    },
+    "SGS_AUP_BPEKHandler": {
+      "Endpoint": {
+        "Host": "127.0.0.1",
+        "Port": 50019
+      },
+      "LogLevel": "I",
+      "IsEnabled": false
+    }
+  },
+
+  "AuthService": {
+    "Endpoint": {
+      "Host": "127.0.0.1",
+      "Port": 5263
+    },
+    "Database": {
+      "Name": "auth",
+      "Host": "127.0.0.1",
+      "Port": 5432,
+      "Login": "GazSetLogin",
+      "Password": "masterGazSetLogin"
+    },
+    "SigInAttemptFails": 3,
+    "LockOutExpiryTimeInMinutes": 5,
+    "AccessTokenExpiryTimeInMinutes": 15,
+    "RefreshTokenExpiryTimeInDays": 7,
+    "SecurityKey": "Je8c0GSO1A2eptOT3BDuXKu9NSGBufwb",
+    "Serilog": {
+      "MinimumLevel": {
+        "Default": "Information",
+        "Override": {
+          "System.Net.Http.HttpClient": "Warning",
+          "Microsoft.Extensions.Http": "Warning",
+          "Microsoft.AspNetCore": "Warning",
+          "Microsoft.AspNetCore.Server.Kestrel": "Error"
+        }
+      }
+    }
+  },
+
+  "ReportService": {
+    "Endpoint": {
+      "Host": "127.0.0.1",
+      "Port": 55000
+    },
+    "Database": {
+      "Name": "report",
+      "Host": "127.0.0.1",
+      "Port": 5432,
+      "Login": "GazSetLogin",
+      "Password": "masterGazSetLogin"
+    },
+    "DefaultDatabaseConnection": "Local",
+    "MaxParallelWorkers": 10,
+    "SchedulerCheckIntervalSeconds": 60,
+    "ZombieWorkerTimeoutMinutes": 30,
+    "MinAvailableSpacePercent": 10,
+    "OnDemandMaxExpiredHours": 2,
+    "ScheduledMaxExpiredDays": 7,
+    "Serilog": {
+      "MinimumLevel": {
+        "Default": "Information",
+        "Override": {
+          "System.Net.Http.HttpClient": "Warning",
+          "Microsoft.Extensions.Http": "Warning",
+          "Microsoft.AspNetCore": "Warning",
+          "Microsoft.AspNetCore.Server.Kestrel": "Error"
+        }
+      }
+    }
+  }
+}
+
